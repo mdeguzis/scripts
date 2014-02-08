@@ -1,0 +1,22 @@
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 7), 0 or 7 is sunday. OR sun,mon,tue,wed,thur,fri,sat
+# |  |  |  |  |
+# *  *  *  *  *  command to be executed
+#
+#test crontab below
+#  * * * * * echo test > ~/test.txt
+#
+#recording of JB Live Shows
+30 12 * * 6 /home/mikeyd/scripts/jb_live/jb_live_fauxshow.sh 
+30 14 * * 3 /home/mikeyd/scripts/jb_live/jb_live_bsdnow.sh
+30 11 * * 1 /home/mikeyd/scripts/jb_live/jb_live_coderradio.sh
+00 12 * * 7 /home/mikeyd/scripts/jb_live/jb_live_LAS.sh
+00 16 * * 2 /home/mikeyd/scripts/jb_live/jb_live_LASunplugged.sh
+00 22 * * 2 /home/mikeyd/scripts/jb_live/jb_live_scibyte.sh
+30 15 * * 4  /home/mikeyd/scripts/jb_live/jb_live_techsnap.sh
+30 20 * * 3  /home/mikeyd/scripts/jb_live/jb_live_unfilter.sh
+~
+
