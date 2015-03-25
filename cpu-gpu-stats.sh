@@ -2,6 +2,15 @@
 
 clear
 
+# Set vars
+CPU=$(less /proc/cpuinfo | grep -m 1 "model name" | cut -c 14-70)
+CPU_TEMPS=$(sensors | grep -E '(Core|Physical)')
+
+GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
+GPU_DRIVER=$(nvidia-smi -a | grep -E 'Driver Version' | cut -c 39-100)
+GPU_TEMP=$(nvidia-smi -a | grep -E 'Current Temp' | cut -c 39-100)
+GPU_FAN=$(nvidia-smi -a | grep -E 'Fan Speed' | cut -c 39-100)
+
 # Check for packages
 #	if ! which lm-sensors > /dev/null; then
 	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) ]]; then
@@ -48,13 +57,19 @@ do
 #############
 
 # With Cores
-sensors | grep -E '(Core|Physical)'
+echo ""
+echo "CPU Name: $CPU"
+echo "CPU Temp:"
+echo "$CPU_TEMPS"
+
 
 #############
 #GPU
 #############
 echo ""
-nvidia-smi -a | grep -E '(Name|Current Temp)'
+echo "GPU Name: $GPU"
+echo "GPU Temp: $GPU_TEMP"
+echo "GPU Fan Speed: $GPU_FAN"
 
 # let stat's idel for a bit
 sleep 2s
