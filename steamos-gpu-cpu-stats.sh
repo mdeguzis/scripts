@@ -50,7 +50,6 @@ do
 	echo "Monitoring CPU and GPU temps"
 	echo "###########################################################"
 	echo "Press [CTRL+C] to stop.."
-	echo ""
 
 #############
 #CPU
