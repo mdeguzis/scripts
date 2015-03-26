@@ -105,7 +105,7 @@ do
 
 	GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
 	GPU_DRIVER=$(nvidia-smi -a | grep -E 'Driver Version' | cut -c 39-100)
-	GPU_TEMP=$(nvidia-smi -a | grep -E 'Current Temp' | cut -c 39-40 | sed 's|$|° C|g')
+	GPU_TEMP=$(nvidia-smi -a | grep -E 'Current Temp' | cut -c 39-40 | sed "s|$|$CEL|g")
 	GPU_FAN=$(nvidia-smi -a | grep -E 'Fan Speed' | cut -c 39-100)
 
 	clear
@@ -122,7 +122,7 @@ do
 	echo "GPU Stats"
 	echo "###########################################################"
 	echo "GPU Name: $GPU"
-	echo "GPU Temp: $GPU_TEMP" 
+	echo "GPU Temp: $GPU_TEMP"
 	echo "GPU Fan Speed: $GPU_FAN"
 
 	########################################
