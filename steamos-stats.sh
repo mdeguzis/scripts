@@ -101,7 +101,7 @@ do
 
 	clear
 	echo "###########################################################"
-	echo "Monitoring CPU and GPU temps"
+	echo "Monitoring CPU and GPU statistics"
 	echo "###########################################################"
 	echo "Press [CTRL+C] to stop.."
 
