@@ -114,7 +114,7 @@ do
 	echo "$CPU_TEMPS"
 	echo ""
 	echo "CPU Utilization"
-	echo "#CPU_LOAD"
+	echo "$CPU_LOAD"
 
 	########################################
 	# GPU Stats
