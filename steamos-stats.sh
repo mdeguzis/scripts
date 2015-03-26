@@ -40,12 +40,12 @@ clear
 
 	# Temperature detection
 
-	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) || -z $(type -P sysstat) ]]; then
+	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) || -z $(type -P sar) || -z $(type -P free) ]]; then
 		echo ""
 		echo "#####################################################"
 		echo "Pre-req checks"
 		echo "#####################################################"
-		echo "Did not find 1 or more of the packages: lm-sensors, or nvidia-smi, sysstat"
+		echo "Did not find 1 or more of the packages: lm-sensors, or nvidia-smi, sar, free"
 		echo "Attempting to install these now.(Must have Debian Repos added)"
 		echo ""
 		sleep 3s
@@ -55,15 +55,15 @@ clear
 		sudo apt-get -t wheezy install lm-sensors sysstat -y
 		sudo apt-get install nvidia-smi -y
 		if [ $? == '0' ]; then
-			echo "Successfully installed 'lm-sensors/nvidia-smi/sysstat'"
+			echo "Successfully installed 'lm-sensors/nvidia-smi/sar/free'"
 			sleep 3s
 		else
-			echo "Could not install 'lm-sensors/nvidia-smi/sysstat. Exiting..."
+			echo "Could not install 'lm-sensors/nvidia-smi/sar/free. Exiting..."
 			sleep 3s
 			exit 1
 		fi
 	else
-		echo "Found packages 'lm-sensors/nvidia-smi'."
+		echo "Found packages 'lm-sensors/nvidia-smi/sar/free'."
 		sleep 1s
 	fi
 
