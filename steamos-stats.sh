@@ -94,11 +94,10 @@ do
 	########################################
 	# Set VARS
 	########################################
-	degree_symbol=$("\0260C")
 	CPU=$(less /proc/cpuinfo | grep -m 1 "model name" | cut -c 14-70)
 	CPU_TEMPS=$(sensors | grep -E '(Core|Physical)')
+
 	CPU_LOAD=$(iostat | cut -f 2 | grep -A 1 "avg-cpu" | sed 's|�|degree|g')
-	
 	MEM_LOAD=$(free -m | grep -E '(total|Mem|Swap)' |  cut -c 1-7,13-18,23-29,34-40,43-51,53-62,65-73)
 
 	GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
