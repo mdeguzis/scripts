@@ -40,7 +40,7 @@ clear
 
 	# Temperature detection
 
-	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) || -z $(type -P sar) ]]; then
+	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) || -z $(type -P sysstat) ]]; then
 		echo ""
 		echo "#####################################################"
 		echo "Pre-req checks"
