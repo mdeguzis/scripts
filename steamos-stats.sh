@@ -91,6 +91,8 @@ do
 	CPU=$(less /proc/cpuinfo | grep -m 1 "model name" | cut -c 14-70)
 	CPU_TEMPS=$(sensors | grep -E '(Core|Physical)')
 	CPU_LOAD=$(sar -u 1 1)
+	
+	MEM_LOAD=$(free -h)
 
 	GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
 	GPU_DRIVER=$(nvidia-smi -a | grep -E 'Driver Version' | cut -c 39-100)
@@ -104,6 +106,15 @@ do
 	echo "Press [CTRL+C] to stop.."
 
 	########################################
+	# GPU Stats
+	########################################
+	
+	echo ""
+	echo "GPU Name: $GPU"
+	echo "GPU Temp: $GPU_TEMP"
+	echo "GPU Fan Speed: $GPU_FAN"
+
+	########################################
 	# CPU Stats
 	########################################
 	
@@ -115,15 +126,12 @@ do
 	echo ""
 	echo "CPU Utilization"
 	echo "$CPU_LOAD"
-
-	########################################
-	# GPU Stats
-	########################################
 	
+	########################################
+	# MEMORY Stats
+	########################################
 	echo ""
-	echo "GPU Name: $GPU"
-	echo "GPU Temp: $GPU_TEMP"
-	echo "GPU Fan Speed: $GPU_FAN"
+	echo "$MEM_LOAD"
 	
 	# let stat's idel for a bit
 	sleep 2s
