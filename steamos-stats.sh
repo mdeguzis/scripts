@@ -46,7 +46,8 @@ clear
 		echo "#####################################################"
 		echo "Pre-req checks"
 		echo "#####################################################"
-		echo "Did not find 1 or more of the packages: lm-sensors, or nvidia-smi, sar, free"
+		echo "Did not find 1 or more of the packages: lm-sensors, or" 
+		echo "nvidia-smi, sar, free,or ssh"
 		echo "Attempting to install these now.(Must have Debian Repos added)"
 		echo ""
 		sleep 3s
@@ -55,20 +56,20 @@ clear
 		sudo apt-get update
 		# fetch needed pkgs
 		sudo apt-get -t wheezy install lm-sensors sysstat -y
-		sudo apt-get install nvidia-smi -y
+		sudo apt-get install nvidia-smi openssh-server -y
 		# detect sensors automatically
 		sudo sensors-detect --auto
 
 		if [ $? == '0' ]; then
-			echo "Successfully installed 'lm-sensors/nvidia-smi/sar/free'"
+			echo "Successfully installed pre-requisite packages"
 			sleep 3s
 		else
-			echo "Could not install 'lm-sensors/nvidia-smi/sar/free. Exiting..."
+			echo "Could not install pre-requisite packages. Exiting..."
 			sleep 3s
 			exit 1
 		fi
 	else
-		echo "Found packages 'lm-sensors/nvidia-smi/sar/free'."
+		echo "Found packages 'lm-sensors/nvidia-smi/sar/free/ssh'."
 		sleep 1s
 	fi
 
