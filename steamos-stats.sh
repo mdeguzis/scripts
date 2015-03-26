@@ -10,6 +10,7 @@
 # Usage:	./steamos-stats.sh
 # Warning:	You MUST have the Debian repos added properly for 
 #		Installation of the pre-requisite packages.
+# TODO:		Add AMD GPU support
 # ------------------------------------------------------------------------
 
 
