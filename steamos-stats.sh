@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# -----------------------------------------------------------------------
+# Author: 	Michael DeGuzis
+# Git:		https://github.com/ProfessorKaos64
+# Scipt Name:	steamos-stats.sh
+# Script Ver:	0.2.2
+# Description:	Monitors various stats easily over an SSH connetion to
+#		gauge performance and temperature loads on steamos.
+# Usage:	./steamos-stats.sh
+# Warning:	You MUST have the Debian repos added properly for 
+#		Installation of the pre-requisite packages.
+# ------------------------------------------------------------------------
+
+
 clear
 
 # Check for packages
