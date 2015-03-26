@@ -50,11 +50,15 @@ clear
 		echo "Attempting to install these now.(Must have Debian Repos added)"
 		echo ""
 		sleep 3s
+	
 		# Update system first
 		sudo apt-get update
 		# fetch needed pkgs
 		sudo apt-get -t wheezy install lm-sensors sysstat -y
 		sudo apt-get install nvidia-smi -y
+		# detect sensors automatically
+		sudo sensors-detect --auto
+
 		if [ $? == '0' ]; then
 			echo "Successfully installed 'lm-sensors/nvidia-smi/sar/free'"
 			sleep 3s
