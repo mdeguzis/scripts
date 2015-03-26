@@ -14,8 +14,9 @@
 
 
 clear
-
+####################################################################
 # Check for packages
+####################################################################
 
 	# FPS + more binds from VaporOS 2
 	# For bindings, see: /etc/actkbd-steamos-controller.conf
@@ -68,7 +69,9 @@ clear
 
 clear
 
+####################################################################
 # voglperf testing
+####################################################################
 # Currently assumes hard location path of /home/desktop/voglperf
 # Full AppID game list: http://steamdb.info/linux/
 # Currently, still easier to use Shark's VaporOS package, which adds
@@ -76,13 +79,15 @@ clear
 
 # sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
 
-
+####################################################################
 # Start Loop
-
+####################################################################
 while :
 do
 
-	# Set vars
+	########################################
+	# Set VARS
+	########################################
 	CPU=$(less /proc/cpuinfo | grep -m 1 "model name" | cut -c 14-70)
 	CPU_TEMPS=$(sensors | grep -E '(Core|Physical)')
 
@@ -97,26 +102,26 @@ do
 	echo "###########################################################"
 	echo "Press [CTRL+C] to stop.."
 
-#############
-#CPU
-#############
+	########################################
+	# CPU Stats
+	########################################
+	
+	# With Cores
+	echo ""
+	echo "CPU Name: $CPU"
+	echo "CPU Temp:"
+	echo "$CPU_TEMPS"
 
-# With Cores
-echo ""
-echo "CPU Name: $CPU"
-echo "CPU Temp:"
-echo "$CPU_TEMPS"
-
-
-#############
-#GPU
-#############
-echo ""
-echo "GPU Name: $GPU"
-echo "GPU Temp: $GPU_TEMP"
-echo "GPU Fan Speed: $GPU_FAN"
-
-# let stat's idel for a bit
-sleep 2s
+	########################################
+	# GPU Stats
+	########################################
+	
+	echo ""
+	echo "GPU Name: $GPU"
+	echo "GPU Temp: $GPU_TEMP"
+	echo "GPU Fan Speed: $GPU_FAN"
+	
+	# let stat's idel for a bit
+	sleep 2s
 
 done
