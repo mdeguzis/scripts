@@ -52,8 +52,8 @@ clear
 		# Update system first
 		sudo apt-get update
 		# fetch needed pkgs
-		sudo apt-get -t wheezy install lm-sensors sysstat
-		sudo apt-get install nvidia-smi
+		sudo apt-get -t wheezy install lm-sensors sysstat -y
+		sudo apt-get install nvidia-smi -y
 		if [ $? == '0' ]; then
 			echo "Successfully installed 'lm-sensors/nvidia-smi/sar'"
 			sleep 3s
