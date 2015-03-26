@@ -2,7 +2,7 @@
 
 # -----------------------------------------------------------------------
 # Author: 	Michael DeGuzis
-# Git:		https://github.com/ProfessorKaos64
+# Git:		https://github.com/ProfessorKaos64/scripts
 # Scipt Name:	steamos-stats.sh
 # Script Ver:	0.4.3
 # Description:	Monitors various stats easily over an SSH connetion to
