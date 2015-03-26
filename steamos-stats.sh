@@ -94,6 +94,8 @@ do
 	########################################
 	# Set VARS
 	########################################
+	CEL=$(echo $'\xc2\xb0'C)
+	
 	CPU=$(less /proc/cpuinfo | grep -m 1 "model name" | cut -c 14-70)
 	CPU_TEMPS=$(sensors | grep -E '(Core|Physical)'| iconv -f ISO-8859-1 -t UTF-8)
 
@@ -103,7 +105,7 @@ do
 
 	GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
 	GPU_DRIVER=$(nvidia-smi -a | grep -E 'Driver Version' | cut -c 39-100)
-	GPU_TEMP=$(nvidia-smi -a | grep -E 'Current Temp' | cut -c 39-100)
+	GPU_TEMP=$(nvidia-smi -a | grep -E 'Current Temp' | cut -c 39-40 | sed 's|$|° C|g')
 	GPU_FAN=$(nvidia-smi -a | grep -E 'Fan Speed' | cut -c 39-100)
 
 	clear
@@ -111,7 +113,6 @@ do
 	echo "Monitoring CPU and GPU statistics"
 	echo "###########################################################"
 	echo "Press [CTRL+C] to stop.."
-
 	########################################
 	# GPU Stats
 	########################################
@@ -121,7 +122,7 @@ do
 	echo "GPU Stats"
 	echo "###########################################################"
 	echo "GPU Name: $GPU"
-	echo "GPU Temp: $GPU_TEMP"
+	echo "GPU Temp: $GPU_TEMP" 
 	echo "GPU Fan Speed: $GPU_FAN"
 
 	########################################
