@@ -127,6 +127,7 @@ do
 	echo "CPU Stats"
 	echo "###########################################################"
 	echo "CPU Name: $CPU"
+	echo ""
 	echo "CPU Temp:"
 	echo "$CPU_TEMPS"
 	echo ""
