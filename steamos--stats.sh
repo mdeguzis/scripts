@@ -11,6 +11,17 @@ clear
 		wget https://github.com/sharkwouter/steamos-installer/blob/master/pool/main/v/vaporos-binds-xbox360/vaporos-binds-xbox360_1.0_all.deb
 		sudo dpkg -i vaporos-binds-xbox360_1.0_all.deb
 		cd
+		if [ $? == '0' ]; then
+			echo "Successfully installed 'vaporos-binds-xbox360'"
+			sleep 3s
+		else
+			echo "Could not install 'vaporos-binds-xbox360'. Exiting..."
+			sleep 3s
+			exit 1
+		fi
+	else
+		echo "Found package 'vaporos-binds-xbox360'."
+		sleep 1s
 	fi 
 
 	# Temperature detection
