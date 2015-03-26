@@ -92,7 +92,7 @@ do
 	CPU_TEMPS=$(sensors | grep -E '(Core|Physical)')
 	CPU_LOAD=$(sar -u 1 1)
 	
-	MEM_LOAD=$(free -h)
+	MEM_LOAD=$(iostat | cut -f 2 | grep -A 1 "avg-cpu")
 
 	GPU=$(nvidia-smi -a | grep -E 'Name' | cut -c 39-100)
 	GPU_DRIVER=$(nvidia-smi -a | grep -E 'Driver Version' | cut -c 39-100)
