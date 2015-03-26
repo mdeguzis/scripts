@@ -3,11 +3,22 @@
 clear
 
 # Check for packages
-#	if ! which lm-sensors > /dev/null; then
+
+	# FPS + more binds from VaporOS 2
+	# For bindings, see: /etc/actkbd-steamos-controller.conf
+	if [ ! -d "/usr/share/doc/vaporos-binds-xbox360" ]; then
+		cd ~/Downloads
+		wget https://github.com/sharkwouter/steamos-installer/blob/master/pool/main/v/vaporos-binds-xbox360/vaporos-binds-xbox360_1.0_all.deb
+		sudo dpkg -i vaporos-binds-xbox360_1.0_all.deb
+		cd
+	fi 
+
+	# Temperature detection
+
 	if [[ -z $(type -P sensors) || -z $(type -P nvidia-smi) ]]; then
 		echo ""
 		echo "#####################################################"
-		echo "Pre-req checks"	
+		echo "Pre-req checks"
 		echo "#####################################################"
 		echo "Did not find 1 or more of the packages: lm-sensors, or nvidia-smi"
 		echo "Attempting to install these now.(Must have Debian Repos added)"
@@ -32,6 +43,15 @@ clear
 	fi
 
 clear
+
+# voglperf testing
+# Currently assumes hard location path of /home/desktop/voglperf
+# Full AppID game list: http://steamdb.info/linux/
+# Currently, still easier to use Shark's VaporOS package, which adds
+# easy gamepad toggles for an FPS overlay
+
+# sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
+
 
 # Start Loop
 
