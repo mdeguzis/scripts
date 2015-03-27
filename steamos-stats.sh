@@ -75,8 +75,6 @@ clear
 		sleep 1s
 	fi
 
-clear
-
 ####################################################################
 # voglperf testing
 ####################################################################
@@ -94,6 +92,8 @@ else
    APPID=True
    echo -ne 'showfps on\n' |  echo -ne 'game start $APPID \n' | sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
 fi
+
+clear
 
 ####################################################################
 # Start Loop
