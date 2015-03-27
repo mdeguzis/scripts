@@ -165,6 +165,8 @@ do
 	# FPS Stats (vogelperf)
 	########################################
 	
+	echo $APPID 
+	
 	if [[ "$APPID" == "FALSE" ]] ; then
   		# Do not show text
   		echo "test test"
