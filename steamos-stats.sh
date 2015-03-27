@@ -165,16 +165,14 @@ do
 	# FPS Stats (vogelperf)
 	########################################
 	
-	echo $APPID 
-	
-	if [[ "$APPID" == "FALSE" ]] ; then
+	#echo $APPID 
+	if [[ "$APPID" == "False" ]] ; then
   		# Do not show text
   		echo "test test"
 	else
   		echo "FPS Stats: "
 	fi
 
-	
 	# let stat's idel for a bit
 	sleep 2s
 
