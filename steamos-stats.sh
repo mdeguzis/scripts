@@ -165,7 +165,7 @@ do
 	# FPS Stats (vogelperf)
 	########################################
 	
-	if [[ $APPID == "FALSE" ]] ; then
+	if [[ "$APPID" == "FALSE" ]] ; then
   		# Do not show text
   		echo "test test"
 	else
