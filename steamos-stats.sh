@@ -161,6 +161,18 @@ do
 	echo "###########################################################"
 	echo "$MEM_LOAD"
 	
+	########################################
+	# FPS Stats (vogelperf)
+	########################################
+	
+	if [[ $APPID == "FALSE" ]] ; then
+  		# Do not show text
+  		echo "test test"
+	else
+  		echo "FPS Stats: "
+	fi
+
+	
 	# let stat's idel for a bit
 	sleep 2s
 
