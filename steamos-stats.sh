@@ -13,6 +13,8 @@
 # TODO:		Add AMD GPU support
 # ------------------------------------------------------------------------
 
+# Set initial VAR values
+APPID=False
 
 clear
 ####################################################################
@@ -83,7 +85,15 @@ clear
 # Currently, still easier to use Shark's VaporOS package, which adds
 # easy gamepad toggles for an FPS overlay
 
-# sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
+# Accept game ID argument. If found, turn APPID=True
+if [ $# -eq 0 ]
+  then
+    echo "No arguments supplied (vogelperf disabled)"
+else
+   APPID=True
+   
+   echo -ne 'showfps on\n' |  echo -ne 'game start $APPID \n' | sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
+fi
 
 ####################################################################
 # Start Loop
@@ -155,3 +165,4 @@ do
 	sleep 2s
 
 done
+pkill voglperfrun64
