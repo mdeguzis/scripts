@@ -168,7 +168,6 @@ do
 	#echo $APPID 
 	if [[ "$APPID" == "False" ]] ; then
   		# Do not show text
-  		echo "test test"
 	else
   		echo "FPS Stats: "
 	fi
