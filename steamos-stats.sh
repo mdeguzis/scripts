@@ -89,8 +89,8 @@ if [ $# -eq 0 ]
     echo "No arguments supplied (vogelperf disabled)"
     sleep 2s
 else
-   APPID=True
-   echo -ne 'showfps on\n' |  echo -ne 'game start $APPID \n' | sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
+   #APPID=True
+   #echo -ne 'showfps on\n' |  echo -ne 'game start $APPID \n' | sudo -u steam /home/desktop/voglperf/bin/voglperfrun64
 fi
 
 clear
