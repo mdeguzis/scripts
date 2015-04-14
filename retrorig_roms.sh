@@ -42,7 +42,7 @@
 export now=$(date +"%Y-%m-%d-%S") && rsync -aP --exclude="z_RetroRig_Test_ROMs" \
 --exclude="*.nfo" --exclude="tools" --exclude="temp" --exclude="Dreamcast" --delete \
 --log-file=/home/mikeyd/user_logs/retrorig_trnsfr_log$now.log \
---rsh='ssh -p 22 -i /home/mikeyd/.ssh/retrorig' \
+--rsh='ssh -p 22 -i /home/mikeyd/.ssh/id_rsa' \
 /mnt/server_media_x/ROMs/ mikeyd@retrorig:/home/mikeyd/RetroRig/ROMs
 
 ################################
