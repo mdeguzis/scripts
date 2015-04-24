@@ -31,7 +31,7 @@ main()
   
   grep -i $gamearg $mametxt | grep -i "Game: " | while read -r game_title ; do
     filename=$(grep -i $gametitle $mametxt)
-    echo -n "$game_title $filename" 
+    echo "$filename" 
     # your code goes here
   done
   
