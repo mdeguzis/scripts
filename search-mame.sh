@@ -32,7 +32,8 @@ main()
   #TODO
   
   # echo output
-  echo -e "\nROM files that closely relate to the game title ${gamearg}:\n"
+  echo -e "\nROM files that closely relate to the game title "
+  echo -e "[${gamearg}]:\n"
   
   # evaluate
   if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
