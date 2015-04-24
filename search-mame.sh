@@ -25,7 +25,7 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults=(grep -i $gamearg)
+  gameresults=(grep -i $gamearg $mametxt)
   
   # Format results
   #TODO
