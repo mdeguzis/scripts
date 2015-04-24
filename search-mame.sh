@@ -29,7 +29,7 @@ main()
   #gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
   
   
-  grep grep -i $gamearg $mametxt | grep -i "Game: " | while read -r line ; do
+  grep -i $gamearg $mametxt | grep -i "Game: " | while read -r line ; do
     echo "$line"
     # your code goes here
   done
