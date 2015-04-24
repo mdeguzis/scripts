@@ -26,19 +26,15 @@ main()
   
   # Search game list
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
-  gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
-  test=$(grep -i -A 7 $gameresults_title $mametxt)
+  #gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
   
-  echo "$test"
-  exit
   
   if [[ "$gameresults_title" == "" ]]; then
     # no game title found
     echo "" > /dev/null
   else
-    gameresults_file=$(grep -i $gameresults_title $mametxt | grep -i 'Game Filename: ')
+    gameresults=$(grep -i -a 7 $gameresults_title $mametxt | grep -i 'Game Filename: ')
   fi
-  
 
   # Format results
   #TODO
@@ -51,7 +47,7 @@ main()
   if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
     echo -e "Game title $gamearg not found..."
   else
-    echo -e "${gameresults_title}: ${gameresults_file}"
+    echo -e "${gameresults}"
   fi
 
 }
