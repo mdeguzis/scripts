@@ -51,11 +51,9 @@ main()
   echo -e "\nROM files that closely relate to the game title "
   echo -e "[${gamearg}]:\n"
   
-  i=0
-  
   grep -i $gamearg $mametxt | grep -i -E 'Game: |Game Filename: ' | while read -r game ; do
-    echo -e "[$i] $game"
-    $i=$($i+1)
+    echo -e "($count) $game"
+    count=$((count+1))
   done
   
   exit
