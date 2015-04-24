@@ -26,17 +26,7 @@ main()
   
   # Search game list
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
-  gameresults_file=$(grep -i $gamearg $mametxt | grep -i -A 12 "Game: " | grep -i "Game Filename: ")
-  
-  if [[ "$gameresults_title" == "" ]]; then
-    # no game title found
-    echo "" > /dev/null
-  else
-    gameresults=$(gameresults_file)
-  fi
-
-  # Format results
-  #TODO
+  gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
   
   # echo output
   echo -e "\nROM files that closely relate to the game title "
@@ -48,6 +38,9 @@ main()
   else
     echo -e "$gameresults_title\n"
   fi
+  
+  # Format results
+  #TODO
 
 }
 
