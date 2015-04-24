@@ -11,7 +11,7 @@
 # -------------------------------------------------------------------------------
 
 # set vars
-scriptdir=(pwd)
+scriptdir=$(pwd)
 mametxt="$scriptdir/extra/MAME.txt"
 gamearg="$1"
 
