@@ -28,8 +28,7 @@ main()
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
   gameresults_file=$(grep -i $gamearg $mametxt | grep -i -A 5 "Game: " | grep -i "Game Filename: ")
   
-  echo "$gameresults_title"
-  echo "$gameresults_file"
+  echo -n "Result: $gameresults_title and $gameresults_file"
   exit
   
   if [[ "$gameresults_title" == "" ]]; then
