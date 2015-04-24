@@ -25,13 +25,13 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults=(grep -i $gamearg $mametxt)
+  gameresults=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
   
   # Format results
   #TODO
   
   # echo output
-  echo -e "\nMatches that closely relate to the game title ${gamearg}:\n"
+  echo -e "\nROM files that closely relate to the game title ${gamearg}:\n"
   
   # evaluate
   if [[ "$gameresults" == "" ]]; then
