@@ -55,8 +55,8 @@ main()
   echo -e "\nROM files that closely relate to the game title "
   echo -e "[${gamearg}]:\n"
   
-  grep -i $gamearg $mametxt | grep -E 'Game: |Game Filename: ' | while read -r game_title ; do
-    echo "$game_title"
+  grep -i $gamearg $mametxt | grep -E 'Game: |Game Filename: ' | while read -r game ; do
+    echo -e "$game\n"
     #grep -i $gamearg $mametxt | grep -i "Game Filename: " | while read -r game_filename ; do
     #echo "$game_filename"
     #done
