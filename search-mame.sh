@@ -55,6 +55,16 @@ main()
   echo -e "\nROM files that closely relate to the game title "
   echo -e "[${gamearg}]:\n"
   
+  grep -i $gamearg $mametxt | grep -i "Game: " | while read -r game_title ; do
+    echo "$game_title"
+    grep -i $gamearg $mametxt | grep -i "Game Filename: " | while read -r game_filename
+    echo "$game_filename"
+    # your code goes here
+  done
+  
+  
+  exit
+  
   # evaluate
   if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
     echo -e "Game title $gamearg not found...\n"
