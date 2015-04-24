@@ -25,16 +25,10 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
-  #gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
+  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -A 4 "Game: ")
+  gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
   
-  
-  grep -i $gamearg $mametxt | grep -i "Game: " | while read -r game_title ; do
-    filename=$(grep -i $gametitle $mametxt)
-    echo "$filename" 
-    # your code goes here
-  done
-  
+  echo $gameresults_title
   exit
   
   if [[ "$gameresults_title" == "" ]]; then
