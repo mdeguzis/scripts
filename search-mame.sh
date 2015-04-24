@@ -35,7 +35,7 @@ main()
   echo -e "\nROM files that closely relate to the game title ${gamearg}:\n"
   
   # evaluate
-  if [[ "$gameresults" == "" ]]; then
+  if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
     echo -e "Game title $gamearg not found...\n"
   else
     echo -e "$gameresults_title\n$gameresults\n"
