@@ -23,12 +23,8 @@ main()
   
   # Calculate MD5sum of MAME.txt
   # Valid MD5sum hash: "7586e4ffecb86296d2492f704a91e00e MAME.txt"
-  MD5sum_valid="7586e4ffecb86296d2492f704a91e00e MAME.txt"
+  MD5sum_valid="7586e4ffecb86296d2492f704a91e00e  MAME.txt"
   MD5sum_check=$(md5sum MAME.txt)
-  
-  echo "'$MD5sum_valid'"
-  echo "'$MD5sum_check'"
-  exit
   
   # check for MAME.txt in pwd, download if missing
   if [[ -f "MAME.txt" ]]; then
