@@ -25,8 +25,8 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
-  gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
+  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -e "Game: ")
+  gameresults_file=$(grep -i $gamearg $mametxt | grep -i 'Game Filename: |Game: ')
 
   # Format results
   #TODO
@@ -39,7 +39,7 @@ main()
   if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
     echo -e "Game title $gamearg not found..."
   else
-    echo -e "${gameresults_title}: ${gameresults_file}"
+    echo -e "${gameresults_title}" #${gameresults_file}"
   fi
 
 }
