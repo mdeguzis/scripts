@@ -28,10 +28,17 @@ main()
   gameresults=(grep -i $gamearg)
   
   # Format results
-  TODO
+  #TODO
   
   # echo output
   echo -e "\nMatches that closely relate to the game title ${gamearg}:\n"
+  
+  # evaluate
+  if [[ "$gameresults == "" ]]; then
+    echo -e "\nGame title $gamearg not found...\n"
+  else
+    echo -e "\n$gameresults"
+  fi
 
 }
 
