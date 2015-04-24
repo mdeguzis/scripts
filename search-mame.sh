@@ -3,7 +3,8 @@
 # -------------------------------------------------------------------------------
 # Author:     	Michael DeGuzis
 # Git:	      	https://github.com/ProfessorKaos64/SteamOS-Tools
-# Scipt Name: 	build-test-chroot.sh
+# Scipt Name: 	search-mame.sh
+# Usage:	./search-mame
 # Script Ver: 	0.1.3
 # Description:	Searches latest available mame.txt for game, returns file
 #               name matches to look for in your list of ROMs.
@@ -13,13 +14,18 @@
 # set vars
 scriptdir=$(pwd)
 mametxt="MAME.txt"
-gamearg="$1"
+# capture all args
+gamearg="$*"
 
 main()
 {
 	clear
 	# obtain latest mame list
 	# TODO
+
+	# ask for game? 
+	#read -r -p "Enter game to search: " input
+	#gamearg="$input"
 
 	# Calculate MD5sum of MAME.txt
 	# Valid MD5sum hash: "7586e4ffecb86296d2492f704a91e00e MAME.txt"
@@ -46,16 +52,16 @@ main()
 	# mametxt="$scriptdir/extra/MAME.txt"
 
 	# Search game list
-	gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
-	gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
+	gameresults_title=$(grep -i "$gamearg" $mametxt | grep -i "Game: ")
+	gameresults_file=$(grep -i "$gamearg" $mametxt | grep -i "Game Filename: ")
 
 	# echo output
 	echo -e "\nROM files that closely relate to the game title "
-	echo -e "[${gamearg}]:\n"
+	echo -e "["$gamearg"]:\n"
 
 	# evaluate
 	if [[ "$gameresults_title" == "" ]]; then
-		echo -e "Game title $gamearg not found...\n"
+		echo -e "Game title "$gamearg" not found...\n"
 	else
 		grep -i -B 1 -A 7 "$gameresults_title" "$mametxt" | while read -r game ; do
 			#echo $game 			
