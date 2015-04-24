@@ -59,7 +59,7 @@ main()
     echo "$game_title"
     grep -i $gamearg $mametxt | grep -i "Game Filename: " | while read -r game_filename
     echo "$game_filename"
-    # your code goes here
+    done
   done
   
   
