@@ -55,7 +55,7 @@ main()
   
   grep -i $gamearg $mametxt | grep -i -E 'Game: |Game Filename: ' | while read -r game ; do
     echo -e "[$i] $game"
-    $i=$(($i+1))
+    $i=$($i+1)
   done
   
   exit
