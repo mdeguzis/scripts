@@ -26,10 +26,9 @@ main()
   
   # Search game list
   gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
-  gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: " &&  echo -n "$gameresults_file") 
-  # | cut -c 5-50) # awk '{print $0,"\n"}')
+  gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ") 
   
-  echo "$gameresults_title"
+  echo -n "$gameresults_title $gameresults_file"
   exit
   
   if [[ "$gameresults_title" == "" ]]; then
