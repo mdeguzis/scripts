@@ -25,7 +25,7 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -e "Game: " | cut -c 6-50 | xargs echo -e "?$\n")
+  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -e "Game: " | cut -c 6-50 | awk '{print $0,"\n"}')
   
   echo $gameresults_title
   exit
