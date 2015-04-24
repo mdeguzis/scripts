@@ -33,7 +33,7 @@ main()
     # no game title found
     echo "" > /dev/null
   else
-    gameresults=$(grep -i -a 7 $gameresults_title $mametxt | grep -i 'Game Filename: ')
+    gameresults=$(grep -i $gameresults_title $mametxt | grep -i 'Game Filename: ')
   fi
 
   # Format results
