@@ -4,7 +4,7 @@
 # Author:     	Michael DeGuzis
 # Git:	      	https://github.com/ProfessorKaos64/SteamOS-Tools
 # Scipt Name: 	build-test-chroot.sh
-# Script Ver: 	0.1.1
+# Script Ver: 	0.1.3
 # Description:	Searches latest available mame.txt for game, returns file
 #               name matches to look for in your list of ROMs.
 #	
@@ -25,7 +25,10 @@ main()
   mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
-  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -e "Game: ")
+  gameresults_title=$(grep -i $gamearg $mametxt | grep -i -e "Game: " | cut -c 6-50)
+  
+  echo $gameresults_title
+  exit
   
   if [[ "$gameresults_title" == "" ]]; then
     # no game title found
