@@ -36,7 +36,7 @@ main()
   if [[ "$gameresults_title" == "" || "$gameresults_file" == "" ]]; then
     echo -e "Game title $gamearg not found...\n"
   else
-    echo -e "$gameresults_title\n"
+    echo -e "$gameresults_file\n"
   fi
   
   # Format results
