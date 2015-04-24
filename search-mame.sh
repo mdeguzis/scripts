@@ -54,8 +54,9 @@ main()
   count=1
 
   grep -i $gamearg $mametxt | grep -i -E 'Game: |Game Filename: ' | while read -r game ; do
-    echo -e "($count) $game"
-    count=$((count+.5))
+    grep -i $gamearg $mametxt | grep -e "Game Filename:"
+    #echo -e "($count) $game"
+    count=$((count+1))
   done
   
   exit
