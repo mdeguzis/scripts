@@ -22,7 +22,7 @@ main()
   # TODO
   
   # check for MAME.txt in pwd, download if missing
-  if [[ -f "MAME.txt" ]]
+  if [[ -f "MAME.txt" ]]; then
     # MAME.TXT found
     echo "" > /dev/null
   else
