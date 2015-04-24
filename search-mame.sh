@@ -27,7 +27,7 @@ main()
   # Search game list
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: " | awk '{print $0,"\n"}')
   
-  echo $gameresults_title
+  echo ${gameresults_title}
   exit
   
   if [[ "$gameresults_title" == "" ]]; then
