@@ -17,7 +17,7 @@ gamearg="$1"
 
 main()
 {
-  
+  clear
   # obtain latest mame list
   # TODO
   
@@ -26,8 +26,9 @@ main()
     # MAME.TXT found
     echo "" > /dev/null
   else
-    echo -e "MAME.TXT Game file not found in currend directory. Fetching"
-    wget "https://github.com/ProfessorKaos64/scripts/blob/master/extra/MAME.txt"
+    echo -e "MAME.TXT Game file not found in currend directory. Fetching\n"
+    sleep 1s
+    wget -nv "https://github.com/ProfessorKaos64/scripts/blob/master/extra/MAME.txt"
   fi
   
   # Use listing I have from RetroRig-ES for now
