@@ -56,7 +56,7 @@ main()
   echo -e "[${gamearg}]:\n"
   
   grep -i $gamearg $mametxt | grep -E 'Game: |Game Filename: ' | while read -r game ; do
-    echo -e "$game\n"
+    echo -e "$game"
     #grep -i $gamearg $mametxt | grep -i "Game Filename: " | while read -r game_filename ; do
     #echo "$game_filename"
     #done
