@@ -26,6 +26,7 @@ main()
     # MAME.TXT found
     echo "" > /dev/null
   else
+    echo -e "MAME.TXT Game file not found in currend directory. Fetching"
     wget "https://github.com/ProfessorKaos64/scripts/blob/master/extra/MAME.txt"
   fi
   
@@ -50,9 +51,6 @@ main()
   # Format results
   #TODO
   
-  # cleanup
-  rm -f "MAME.txt"
-
 }
 
 # Start main
