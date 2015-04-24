@@ -21,8 +21,16 @@ main()
   # obtain latest mame list
   # TODO
   
+  # check for MAME.txt in pwd, download if missing
+  if [[ -f "MAME.txt" ]]
+    # MAME.TXT found
+    echo "" > /dev/null
+  else
+    wget "https://github.com/ProfessorKaos64/scripts/blob/master/extra/MAME.txt"
+  fi
+  
   # Use listing I have from RetroRig-ES for now
-  mametxt="$scriptdir/extra/MAME.txt"
+  # mametxt="$scriptdir/extra/MAME.txt"
   
   # Search game list
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
@@ -41,6 +49,9 @@ main()
   
   # Format results
   #TODO
+  
+  # cleanup
+  rm -f "MAME.txt"
 
 }
 
