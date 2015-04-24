@@ -21,10 +21,19 @@ main()
   # obtain latest mame list
   # TODO
   
+  # Calculate MD5sum of MAME.txt
+  # Valid MD5sum hash: "7586e4ffecb86296d2492f704a91e00e MAME.txt"
+  MD5sum_valid="7586e4ffecb86296d2492f704a91e00e MAME.txt"
+  MD5sum_check=$(md5sum MAME.txt)
+  
   # check for MAME.txt in pwd, download if missing
   if [[ -f "MAME.txt" ]]; then
-    # MAME.TXT found
-    echo "" > /dev/null
+    # check MD5sum, if not "our" MAME.txt, backup and pull ours
+    if [[ "$MD5sum_valid" != "$MD5sum_check"  ]]; then
+      echo -e "MAME.txt appears corrupt, fetching...\n"
+      sleep 1s
+      wget -nv "https://github.com/ProfessorKaos64/scripts/blob/master/extra/MAME.txt"
+    fi
   else
     echo -e "MAME.TXT Game file not found in currend directory. Fetching\n"
     sleep 1s
