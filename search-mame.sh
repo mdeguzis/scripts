@@ -27,9 +27,9 @@ main()
   # Search game list
   gameresults_title=$(grep -i $gamearg $mametxt | grep -i "Game: ")
   gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
-  test=$(grep -i -A 7 $gameresults_title $mametxt | grep -i "Game Filename: " )
+  test=$(grep -i -A 7 $gameresults_title $mametxt)
   
-  echo -n "$test"
+  echo "$test"
   exit
   
   if [[ "$gameresults_title" == "" ]]; then
