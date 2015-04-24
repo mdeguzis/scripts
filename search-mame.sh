@@ -27,7 +27,6 @@ main()
   # Search game list
   gameresults_title=$(grep -E $gamearg $mametxt | grep -E 'Game: ' | grep -E 'Game Filename: ') 
   gameresults_file=$(grep -i $gamearg $mametxt | grep -i "Game Filename: ")
-  Game Title: ')
   
   echo -n "$gameresults_title"
   exit
