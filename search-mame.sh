@@ -56,7 +56,7 @@ main()
 	gameresults_file=$(grep -i "$gamearg" $mametxt | grep -i "Game Filename: ")
 
 	# echo output
-	echo -e "\nROM files that closely relate to the game title "
+	echo -e "ROM files that closely relate to the game title "
 	echo -e "["$gamearg"]:\n"
 
 	# evaluate
