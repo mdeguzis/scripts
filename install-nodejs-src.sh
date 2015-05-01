@@ -3,7 +3,8 @@
 # Git:		      	https://github.com/ProfessorKaos64/scripts
 # Scipt Name:	  	install-nodejs-src.sh
 # Script Ver:	  	0.1.1
-# Description:		Script to install NodeJS from source.
+# Description:		Script to install NodeJS from source on Debian
+#			based systems.
 #	
 # Usage:	      	./install-nodejs-src.sh
 # -----------------------------------------------------------------------
@@ -99,7 +100,7 @@ install_nodejs()
 			./configure
 			make test
 			make
-			#sudo make install
+			sudo make install
 		else
 			echo -e "\n==ERROR=="
 			echo -e "Invalid input, exiting...\n"
@@ -114,7 +115,7 @@ install_nodejs()
 		./configure
 		make test
 		make
-		#sudo make install
+		sudo make install
 
 	# end nodejs build eval
 	fi
