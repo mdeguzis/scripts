@@ -1,9 +1,9 @@
 [Unit]
-Description=Emudeck SaveBackup service
+Description=rclone home backup service
 
 [Service]
 Type=simple
-ExecStart="/home/gamer/Emulation/tools/rclone/run_rclone_job.sh"
+ExecStart="%h/.config/home-backup/backup-manager.sh"
 CPUWeight=20
 CPUQuota=50%
 IOWeight=20

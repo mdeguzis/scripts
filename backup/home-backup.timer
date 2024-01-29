@@ -1,13 +1,13 @@
 [Unit]
-Description=Runs EmuDeck SaveBackup Every 15 minutes
-Requires=emudeck_saveBackup.service
+Description=Runs rclone backup Every 1 hour
+Requires=home-backup.service
 After=network-online.target
 Wants=network-online.target
 
 [Timer]
-OnBootSec=5min
-Unit=emudeck_saveBackup.service
-OnUnitActiveSec=15m
+OnBootSec=1hour
+Unit=home-backup.service
+OnUnitActiveSec=1h
 
 [Install]
 WantedBy=timers.target
