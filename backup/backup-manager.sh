@@ -56,7 +56,31 @@ function install_rclone() {
 
 function install_configs() {
 	# Copy filter files to ${CONFIG} var location
-	echo "TOOD"
+	mkdir -p "${HOME}/.config/home-backup"
+	cp "backup-manager.sh" "${HOME}/.config/home-backup"
+	cp "include-from.txt" "${HOME}/.config/home-backup"
+}
+
+rclone_stop_service(){
+    systemctl --user stop home-backup.timer
+    systemctl --user stop home-backup.service
+}
+
+rclone_start_service(){
+    systemctl --user start home-backup.timer
+}
+
+function create_service() {
+	echo "[INFO] Copying configs"
+	cp "home-backup.service" "$HOME/.config/systemd/user/"
+	cp "home-backup.timer" "$HOME/.config/systemd/user/"
+	systemctl --user enable home-backup.service
+
+	echo "[INFO] Enabling SaveBackup 15 minute timer service"
+	systemctl --user enable home-backup.timer
+
+	echo "[INFO] Starting Timer"
+	rclone_start_service
 }
 
 main() {
@@ -106,6 +130,8 @@ main() {
 
 	if [[ ${INSTALL} == "true" ]]; then
 		install_rclone
+		install_configs
+		create_service
 	fi	
 
 	trap finish EXIT
