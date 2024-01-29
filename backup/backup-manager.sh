@@ -1,14 +1,26 @@
 #!/bin/bash
 # Description: Cloud backup manager
 
-set -e -o pipefail
-
 # Defaults
 CURDIR="${PWD}"
+CONFIG="${HOME}/.config/home-backup"
 DATE=$(date +%Y%m%d-%H%M%S)
 GIT_ROOT=$(git rev-parse --show-toplevel)
 LOG_FILE="/tmp/backup-mgr-${DATE}.log"
-LINE="==========================================================="
+PIDFILE="/tmp/rclone.pid"
+HOSTNAME=$(cat /etc/hostname)
+
+if [[ -z "${HOSTNAME}" ]]; then
+	echo "[ERROR] Could not set hostname for remote!"
+	exit 1
+fi
+
+# Where to start filtering from
+START_PATH="/"
+
+function finish {
+  echo "Script terminating. Exit code $?"
+}
 
 function show_help() {
 	cat<<-HELP_EOF
@@ -42,13 +54,12 @@ function install_rclone() {
 	echo "[INFO] rclone has been installed to /usr/bin/rclone"
 }
 
-main() {
-	cat<<-EOF
-	${LINE}
-	S3 Backup Manager
-	${LINE}
-	EOF
+function install_configs() {
+	# Copy filter files to ${CONFIG} var location
+	echo "TOOD"
+}
 
+main() {
 	while :; do
 		case $1 in
 			--install|-i)
@@ -96,16 +107,51 @@ main() {
 	if [[ ${INSTALL} == "true" ]]; then
 		install_rclone
 	fi	
-	if [[ ${CONFIGURE} == "true" ]]; then
-		/usr/bin/rclone config
-	fi	
 
+	trap finish EXIT
+
+	# PID handling
+	if [ -f "$PIDFILE" ]; then
+	  PID=$(cat "$PIDFILE")
+	  ps -p "$PID" > /dev/null 2>&1
+	  if [ $? -eq 0 ]; then
+	    echo "[ERROR] Process already running"
+	    exit 1
+	  else
+	    ## Process not found assume not running
+	    echo $$ > "$PIDFILE"
+	    if [ $? -ne 0 ]; then
+	      echo "[ERROR] Could not create PID file"
+	      exit 1
+	    fi
+	  fi
+	else
+	  echo $$ > "$PIDFILE"
+	  if [ $? -ne 0 ]; then
+	    echo "[ERROR] Could not create PID file"
+	    exit 1
+	  fi
+	fi
+
+	# Run clone
+	echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
+	"/usr/bin/rclone" copy \
+		--verbose --verbose -L \
+		--include-from ${CURDIR}/include-from.txt \
+		"${START_PATH}" google-drive:home-backup/${HOSTNAME} \
+		-P > "/tmp/rclone-job.log"
+
+	if [ $? -eq 0 ]; then
+		echo "[INFO] Cleanaing PID file $PIDFILE"
+		rm $PIDFILE
+	fi
+
+	# Trim logs
+	echo "[INFO] Trimming logs"
+	find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
 }
 
 # Start and log
 main "$@" 2>&1 | tee "${LOG_FILE}"
 echo "[INFO] Log: ${LOG_FILE}"
-
-# Trim logs
-find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
 
