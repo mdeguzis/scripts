@@ -1,0 +1,13 @@
+[Unit]
+Description=Runs EmuDeck SaveBackup Every 15 minutes
+Requires=emudeck_saveBackup.service
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnBootSec=5min
+Unit=emudeck_saveBackup.service
+OnUnitActiveSec=15m
+
+[Install]
+WantedBy=timers.target
