@@ -27,5 +27,4 @@ fi
 /usr/bin/transmission-cli \
 	--download-dir "${dest}" \
 	--no-downlimit \
-	--verify \
 	"$torrent"
