@@ -59,6 +59,12 @@ function install_configs() {
 	mkdir -p "${HOME}/.config/home-backup"
 	cp "backup-manager.sh" "${HOME}/.config/home-backup"
 	cp "include-from.txt" "${HOME}/.config/home-backup"
+
+	# Add env-variable based paths that change from system to system,
+	# e.g. $HOME
+	# These paths are conditional
+	echo "${HOME}/Emulator/saves" >> "${HOME}/.config/home-backup/include-from.txt"
+
 }
 
 rclone_stop_service(){
@@ -163,7 +169,7 @@ main() {
 	echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
 	"/usr/bin/rclone" copy \
 		--verbose --verbose -L \
-		--include-from ${CURDIR}/include-from.txt \
+		--include-from ${HOME}/.config/home-backup/include-from.txt \
 		"${START_PATH}" google-drive:home-backup/${HOSTNAME} \
 		-P > "/tmp/rclone-job.log"
 
