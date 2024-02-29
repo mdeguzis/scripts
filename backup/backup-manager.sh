@@ -62,8 +62,19 @@ function install_configs() {
 
 	# Add env-variable based paths that change from system to system,
 	# e.g. $HOME
-	# These paths are conditional
-	echo "${HOME}/Emulator/saves" >> "${HOME}/.config/home-backup/include-from.txt"
+	# These paths are conditional based on what system I am backing up
+	paths=()
+	paths+=("${HOME}/Emulation/saves")
+	paths+=("${HOME}/.supermodel/")
+
+	for path in ${paths[@]};
+	do
+		echo "[INFO] Checking if path exists: '${path}'"
+		if [[ -e "${path}" ]]; then 
+			echo "[INFO] Adding path '${path}' to include-from.txt"
+			echo "${path}/**" >> "${HOME}/.config/home-backup/include-from.txt"
+		fi
+	done
 
 }
 
@@ -140,6 +151,10 @@ main() {
 		create_service
 	fi	
 
+	if [[ ${CONFIGURE} == "true" ]]; then
+		install_configs
+	fi
+
 	trap finish EXIT
 
 	# PID handling
@@ -167,11 +182,10 @@ main() {
 
 	# Run clone
 	echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
-	"/usr/bin/rclone" copy \
-		--verbose --verbose -L \
-		--include-from ${HOME}/.config/home-backup/include-from.txt \
-		"${START_PATH}" google-drive:home-backup/${HOSTNAME} \
-		-P > "/tmp/rclone-job.log"
+	cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} google-drive:home-backup/${HOSTNAME} -P"
+	echo "[INFO] Running cmd: '${cmd}'"
+	sleep 3
+	eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
 
 	if [ $? -eq 0 ]; then
 		echo "[INFO] Cleanaing PID file $PIDFILE"
@@ -186,4 +200,5 @@ main() {
 # Start and log
 main "$@" 2>&1 | tee "${LOG_FILE}"
 echo "[INFO] Log: ${LOG_FILE}"
+echo "[INFO] clone operation log: /tmp/rclone-job.log"
 
