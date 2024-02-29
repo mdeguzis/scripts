@@ -63,16 +63,40 @@ function install_configs() {
 	# Add env-variable based paths that change from system to system,
 	# e.g. $HOME
 	# These paths are conditional based on what system I am backing up
+	# TODO: Put this config of paths somewhere else and load it! (JSON?)
 	paths=()
+
+	# Data
 	paths+=("${HOME}/Emulation/saves")
-	paths+=("${HOME}/.supermodel/")
+
+	# Model 2 stuff is hard to setup, save!
+	paths+=("${HOME}/Emulation/roms/model2/EMULATOR*")
+	paths+=("${HOME}/Emulation/roms/model2/CFG")
+	paths+=("${HOME}/Emulation/roms/model2/*meta*")
+	paths+=("${HOME}/Emulation/roms/model2/*pat")
+	paths+=("${HOME}/Emulation/roms/model2/*ps")
+	paths+=("${HOME}/Emulation/roms/model2/*lua")
+
+	# My general configs to save
+	paths+=("${HOME}/.supermodel")
+	paths+=("${HOME}/.bashrc")
+	paths+=("${HOME}/.zshrc")
 
 	for path in ${paths[@]};
 	do
-		echo "[INFO] Checking if path exists: '${path}'"
-		if [[ -e "${path}" ]]; then 
-			echo "[INFO] Adding path '${path}' to include-from.txt"
+		echo "[INFO] Checking if path or file exists: '${path}'"
+		if [[ -d "${path}" ]]; then 
+			echo "[INFO] Adding directory '${path}' to include-from.txt"
 			echo "${path}/**" >> "${HOME}/.config/home-backup/include-from.txt"
+		elif [[ -f "${path}" ]]; then 
+			echo "[INFO] Adding file '${path}' to include-from.txt"
+			echo "${path}" >> "${HOME}/.config/home-backup/include-from.txt"
+		elif echo "${path}" | grep -q '*'; then 
+			# Add glob
+			regex=$(basename "${path}")
+			base_path=$(dirname "${path}")
+			echo "[INFO] Adding results of glob '${regex}' for path ${base_path} to include-from.txt"
+			find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/home-backup/include-from.txt" \;
 		fi
 	done
 
