@@ -54,7 +54,14 @@ function install_rclone() {
 	echo "[INFO] rclone has been installed to /usr/bin/rclone"
 }
 
-function install_configs() {
+function configure() {
+	if ! rclone config show | grep -qw "\[google-drive\]"; then
+		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
+		echo "[INFO] Please name the remote 'home-backup'. Press ENTER to continue"
+		read
+		rclone config
+	fi
+
 	# Copy filter files to ${CONFIG} var location
 	mkdir -p "${HOME}/.config/home-backup"
 	cp "backup-manager.sh" "${HOME}/.config/home-backup"
@@ -76,6 +83,7 @@ function install_configs() {
 	paths+=("${HOME}/Emulation/roms/model2/*pat")
 	paths+=("${HOME}/Emulation/roms/model2/*ps")
 	paths+=("${HOME}/Emulation/roms/model2/*lua")
+	paths+=("${HOME}/Emulation/bios/BIOS-ARCHIVES")
 
 	# My general configs to save
 	paths+=("${HOME}/.supermodel")
@@ -136,13 +144,7 @@ main() {
 				;;
 
 			--backup|-z)
-				if [[ -n $2 ]]; then
-					TARGET="$2"
-				else
-					echo "[ERROR] An argument must be passed!"
-					exit 1
-				fi
-				shift
+				BACKUP="true"
 				;;
 
 			--help|-h)
@@ -171,54 +173,59 @@ main() {
 
 	if [[ ${INSTALL} == "true" ]]; then
 		install_rclone
-		install_configs
+		configure
 		create_service
+		exit 0
 	fi	
 
 	if [[ ${CONFIGURE} == "true" ]]; then
-		install_configs
+		configure
+		exit 0
 	fi
 
-	trap finish EXIT
+	if [[ ${BACKUP} == "true" ]]; then
+		echo "[INFO] Running backup..."
+		trap finish EXIT
 
-	# PID handling
-	if [ -f "$PIDFILE" ]; then
-	  PID=$(cat "$PIDFILE")
-	  ps -p "$PID" > /dev/null 2>&1
-	  if [ $? -eq 0 ]; then
-	    echo "[ERROR] Process already running"
-	    exit 1
-	  else
-	    ## Process not found assume not running
-	    echo $$ > "$PIDFILE"
-	    if [ $? -ne 0 ]; then
-	      echo "[ERROR] Could not create PID file"
-	      exit 1
-	    fi
-	  fi
-	else
-	  echo $$ > "$PIDFILE"
-	  if [ $? -ne 0 ]; then
-	    echo "[ERROR] Could not create PID file"
-	    exit 1
-	  fi
+		# PID handling
+		if [ -f "$PIDFILE" ]; then
+		  PID=$(cat "$PIDFILE")
+		  ps -p "$PID" > /dev/null 2>&1
+		  if [ $? -eq 0 ]; then
+		    echo "[ERROR] Process already running"
+		    exit 1
+		  else
+		    ## Process not found assume not running
+		    echo $$ > "$PIDFILE"
+		    if [ $? -ne 0 ]; then
+		      echo "[ERROR] Could not create PID file"
+		      exit 1
+		    fi
+		  fi
+		else
+		  echo $$ > "$PIDFILE"
+		  if [ $? -ne 0 ]; then
+		    echo "[ERROR] Could not create PID file"
+		    exit 1
+		  fi
+		fi
+
+		# Run clone
+		echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
+		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} google-drive:home-backup/${HOSTNAME} -P"
+		echo "[INFO] Running cmd: ${cmd}"
+		sleep 3
+		eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
+
+		if [ $? -eq 0 ]; then
+			echo "[INFO] Cleanaing PID file $PIDFILE"
+			rm $PIDFILE
+		fi
+
+		# Trim logs
+		echo "[INFO] Trimming logs"
+		find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
 	fi
-
-	# Run clone
-	echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
-	cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} google-drive:home-backup/${HOSTNAME} -P"
-	echo "[INFO] Running cmd: '${cmd}'"
-	sleep 3
-	eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
-
-	if [ $? -eq 0 ]; then
-		echo "[INFO] Cleanaing PID file $PIDFILE"
-		rm $PIDFILE
-	fi
-
-	# Trim logs
-	echo "[INFO] Trimming logs"
-	find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
 }
 
 # Start and log
