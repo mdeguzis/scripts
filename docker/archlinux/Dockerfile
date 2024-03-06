@@ -4,6 +4,8 @@ FROM archlinux:base-devel
 
 # Args to pass in
 ARG HOST_USER
+ARG UID=1000
+ARG GID=1000
 
 # Env vars
 ENV USER ${HOST_USER}
@@ -23,13 +25,17 @@ RUN pacman -S --noconfirm \
 # Add non-root user
 # Create user and setup permissions on /etc/sudoers
 RUN echo "Creating user ${USER} and adding to sudoers"
-RUN useradd --gid users --shell /bin/bash --create-home ${USER}
+RUN groupadd -g ${GID} devusers
+RUN useradd --uid $UID --gid $GID --shell /bin/bash --create-home $USER
 RUN echo "${USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers && \
     chmod 440 /etc/sudoers && \
     chmod g+w /etc/passwd
 
-# Flatpak config
-RUN flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 USER ${USER}
 WORKDIR ${HOME}
+
+COPY init.sh /init.sh
+CMD ["/bin/bash", "/init.sh"]
+ENTRYPOINT /bin/bash
+
