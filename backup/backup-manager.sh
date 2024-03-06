@@ -55,7 +55,7 @@ function install_rclone() {
 }
 
 function configure() {
-	if ! rclone config show | grep -qw "\[google-drive\]"; then
+	if ! rclone config show | grep -qw "\[home-backup-gdrive\]"; then
 		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
 		echo "[INFO] Please name the remote 'home-backup'. Press ENTER to continue"
 		read
@@ -73,6 +73,11 @@ function configure() {
 	# TODO: Put this config of paths somewhere else and load it! (JSON?)
 	paths=()
 
+	# Filter
+	# Add any path (grep regex) to filter out when using '*' glob
+	filters=()
+	filters+=(".*ES.*themes.*")
+
 	# Data
 	paths+=("${HOME}/Emulation/saves")
 
@@ -85,26 +90,45 @@ function configure() {
 	paths+=("${HOME}/Emulation/roms/model2/*lua")
 	paths+=("${HOME}/Emulation/bios/BIOS-ARCHIVES")
 
+	# General configs to backup
+	paths+=("${HOME}/ES-DE/*")
+
 	# My general configs to save
 	paths+=("${HOME}/.supermodel")
 	paths+=("${HOME}/.bashrc")
 	paths+=("${HOME}/.zshrc")
 
-	for path in ${paths[@]};
+	for this_path in ${paths[@]};
 	do
-		echo "[INFO] Checking if path or file exists: '${path}'"
-		if [[ -d "${path}" ]]; then 
-			echo "[INFO] Adding directory '${path}' to include-from.txt"
-			echo "${path}/**" >> "${HOME}/.config/home-backup/include-from.txt"
-		elif [[ -f "${path}" ]]; then 
-			echo "[INFO] Adding file '${path}' to include-from.txt"
-			echo "${path}" >> "${HOME}/.config/home-backup/include-from.txt"
-		elif echo "${path}" | grep -q '*'; then 
+		skip=false
+		# Skip path?
+		for fpath in ${filters[@]};
+		do
+			if echo "${this_path}" | grep -qE "${fpath}"; then
+				echo "[WARN] Skipping path '${this_path}' (filtered)"
+				skip=true
+			fi
+		done
+		if $skip; then
+			continue
+		fi
+
+		echo "[INFO] Checking if path or file exists: '${this_path}'"
+		if echo \'${this_path}\' | grep -q '*'; then 
 			# Add glob
 			regex=$(basename "${path}")
 			base_path=$(dirname "${path}")
-			echo "[INFO] Adding results of glob '${regex}' for path ${base_path} to include-from.txt"
+			echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
 			find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/home-backup/include-from.txt" \;
+
+		elif [[ -d "${this_path}" ]]; then 
+			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
+			echo "${this_path}/**" >> "${HOME}/.config/home-backup/include-from.txt"
+
+		elif [[ -f "${path}" ]]; then 
+			echo "[INFO] Adding file '${this_path}' to include-from.txt"
+			echo "${this_path}" >> "${HOME}/.config/home-backup/include-from.txt"
+
 		fi
 	done
 
@@ -212,7 +236,7 @@ main() {
 
 		# Run clone
 		echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
-		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} google-drive:home-backup/${HOSTNAME} -P"
+		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} home-backup-gdrive:home-backup/${HOSTNAME} -P"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
 		eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
