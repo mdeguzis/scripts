@@ -26,6 +26,7 @@ function show_help() {
 	cat<<-HELP_EOF
 	--help|-h			Show this help page
 	--install			Install rclone
+	--backup			Run backup
 	--configure			Configure backup to S3
 
 	HELP_EOF
@@ -39,7 +40,7 @@ function install_rclone() {
 	# Unpack
 	cd /tmp
 	curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
-	unzip rclone-current-linux-amd64.zip
+	unzip -f rclone-current-linux-amd64.zip
 	cd rclone-*-linux-amd64
 
 	# Install
@@ -167,7 +168,7 @@ main() {
 				CONFIGURE="true"
 				;;
 
-			--backup|-z)
+			--backup|-b)
 				BACKUP="true"
 				;;
 
