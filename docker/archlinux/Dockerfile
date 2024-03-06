@@ -3,10 +3,15 @@
 FROM archlinux:base-devel
 
 # Update
-RUN pacman -Syu --noconfirm
+RUN pacman -Syyu --noconfirm
 
 # Base packages
 RUN pacman -S --noconfirm \
     base-devel \
-    git
+    flatpak \
+    jq \
+    git \
+    vim
 
+# Flatpak config
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
