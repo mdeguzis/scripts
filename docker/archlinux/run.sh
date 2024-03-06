@@ -3,8 +3,9 @@
 docker run \
     --env PS1="ADC(\#)[\d \T:\w]\\$ " \
     --interactive \
-    --privileged \
     --rm \
+	--user "${USER}" \
     --tty \
     --volume "/tmp/target:/target" \
-    "index.docker.io/library/archlinux:base-devel" /bin/bash
+    "archlinux-dev" \
+	/bin/bash

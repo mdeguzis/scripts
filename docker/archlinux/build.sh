@@ -1,4 +1,6 @@
 #!/bin/bash
 
 echo "[INFO] Building Docker image"
-docker build .
+docker build . \
+	--build-arg HOST_USER="${USER}" \
+	--tag archlinux-dev
