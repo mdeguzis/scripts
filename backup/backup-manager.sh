@@ -40,7 +40,7 @@ function install_rclone() {
 	# Unpack
 	cd /tmp
 	curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
-	unzip -f rclone-current-linux-amd64.zip
+	unzip -o rclone-current-linux-amd64.zip
 	cd rclone-*-linux-amd64
 
 	# Install
@@ -58,7 +58,7 @@ function install_rclone() {
 function configure() {
 	if ! rclone config show | grep -qw "\[home-backup-gdrive\]"; then
 		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
-		echo "[INFO] Please name the remote 'home-backup'. Press ENTER to continue"
+		echo "[INFO] Please name the remote 'home-backup-gdrive'. Press ENTER to continue"
 		read
 		rclone config
 	fi
