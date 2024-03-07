@@ -6,3 +6,6 @@ sudo dbus-daemon --system
 
 echo "Adding Flathub remote for user"
 flatpak --user --if-not-exists remote-add flathub https://flathub.org/repo/flathub.flatpakrepo
+
+# Pass through CMD from Dockerfile
+exec "$@"
