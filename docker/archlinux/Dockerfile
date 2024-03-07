@@ -20,8 +20,10 @@ RUN pacman -S --noconfirm \
     flatpak \
     git \
     jq \
+    python3 \
     unzip \
-    vim
+    vim \
+    wget
 
 # Add non-root user
 # Create user and setup permissions on /etc/sudoers
