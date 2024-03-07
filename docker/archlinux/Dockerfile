@@ -19,6 +19,7 @@ RUN pacman -S --noconfirm \
     base-devel \
     flatpak \
     git \
+    go \
     jq \
     python3 \
     unzip \
@@ -37,6 +38,11 @@ RUN echo "${USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers && \
 
 USER ${USER}
 WORKDIR ${HOME}
+
+# Needs to be done as normal user
+RUN git clone https://aur.archlinux.org/yay.git && \
+	cd yay && \
+	makepkg -si --noconfirm
 
 COPY init.sh /init.sh
 ENTRYPOINT ["/bin/bash", "/init.sh"]
