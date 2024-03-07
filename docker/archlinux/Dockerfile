@@ -18,8 +18,9 @@ RUN pacman -Syyu --noconfirm
 RUN pacman -S --noconfirm \
     base-devel \
     flatpak \
-    jq \
     git \
+    jq \
+    unzip \
     vim
 
 # Add non-root user
@@ -36,6 +37,6 @@ USER ${USER}
 WORKDIR ${HOME}
 
 COPY init.sh /init.sh
-CMD ["/bin/bash", "/init.sh"]
-ENTRYPOINT /bin/bash
+ENTRYPOINT ["/bin/bash", "/init.sh"]
+CMD /bin/bash
 
