@@ -3,12 +3,14 @@
 
 # Defaults
 CURDIR="${PWD}"
-CONFIG="${HOME}/.config/home-backup"
+CONFIG="${HOME}/.config/${REMOTE_FOLDER}"
 DATE=$(date +%Y%m%d-%H%M%S)
 GIT_ROOT=$(git rev-parse --show-toplevel)
 LOG_FILE="/tmp/backup-mgr-${DATE}.log"
 PIDFILE="/tmp/rclone.pid"
 HOSTNAME=$(cat /etc/hostname)
+REMOTE="${REMOTE:-${REMOTE_FOLDER}}"
+BACKUP_NAME="${BACKUP_NAME:-${REMOTE_FOLDER}}"
 
 if [[ -z "${HOSTNAME}" ]]; then
 	echo "[ERROR] Could not set hostname for remote!"
@@ -27,6 +29,8 @@ function show_help() {
 	--help|-h			Show this help page
 	--install			Install rclone
 	--backup			Run backup
+ 	--remote-name			The name of the rclone remote to use
+  	--backup-name			Use this remote folder name for service/target folder. No spaces.
 	--configure			Configure backup to S3
 
 	HELP_EOF
@@ -56,17 +60,21 @@ function install_rclone() {
 }
 
 function configure() {
-	if ! rclone config show | grep -qw "\[home-backup-gdrive\]"; then
+	local REMOTE=$1
+ 	local REMOTE_FOLDER=$2
+
+	if ! rclone config show | grep -qw "\[${REMOTE}\]"; then
 		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
-		echo "[INFO] Please name the remote 'home-backup-gdrive'. Press ENTER to continue"
+  		echo -e "Existing remotes:\n$(rclone listremotes)\n"
+		echo "[INFO] Please name the remote ${REMOTE}. Press ENTER to continue"
 		read
 		rclone config
 	fi
 
 	# Copy filter files to ${CONFIG} var location
-	mkdir -p "${HOME}/.config/home-backup"
-	cp "backup-manager.sh" "${HOME}/.config/home-backup"
-	cp "include-from.txt" "${HOME}/.config/home-backup"
+	mkdir -p "${HOME}/.config/${REMOTE_FOLDER}"
+	cp "backup-manager.sh" "${HOME}/.config/${REMOTE_FOLDER}"
+	cp "include-from.txt" "${HOME}/.config/${REMOTE_FOLDER}"
 
 	# Add env-variable based paths that change from system to system,
 	# e.g. $HOME
@@ -90,6 +98,15 @@ function configure() {
 	paths+=("${HOME}/Emulation/roms/model2/*ps")
 	paths+=("${HOME}/Emulation/roms/model2/*lua")
 	paths+=("${HOME}/Emulation/bios/BIOS-ARCHIVES")
+
+ 	# Retroarch / ES
+  	paths+=("${HOME}/.config/retroarch/saves")
+	paths+=("${HOME}/.config/retroarch/retroarch.cfg")
+ 	paths+=("${HOME}/.config/retroarch/config")
+  	paths+=("${HOME}/.config/retroarch/cheats")
+	paths+=("${HOME}/.config/retroarch/overlay")
+ 	paths+=("${HOME}/.emulationstation/collections")
+  	paths+=("${HOME}/.emulationstation/es_settings.cfg")
 
 	# General configs to backup
 	paths+=("${HOME}/ES-DE/*")
@@ -120,15 +137,15 @@ function configure() {
 			regex=$(basename "${path}")
 			base_path=$(dirname "${path}")
 			echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
-			find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/home-backup/include-from.txt" \;
+			find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt" \;
 
 		elif [[ -d "${this_path}" ]]; then 
 			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
-			echo "${this_path}/**" >> "${HOME}/.config/home-backup/include-from.txt"
+			echo "${this_path}/**" >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt"
 
 		elif [[ -f "${path}" ]]; then 
 			echo "[INFO] Adding file '${this_path}' to include-from.txt"
-			echo "${this_path}" >> "${HOME}/.config/home-backup/include-from.txt"
+			echo "${this_path}" >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt"
 
 		fi
 	done
@@ -136,25 +153,27 @@ function configure() {
 }
 
 rclone_stop_service(){
-    systemctl --user stop home-backup.timer
-    systemctl --user stop home-backup.service
+    systemctl --user stop ${BACKUP_NAME}.timer
+    systemctl --user stop ${BACKUP_NAME}.service
 }
 
 rclone_start_service(){
-    systemctl --user start home-backup.timer
+    systemctl --user start ${BACKUP_NAME}.timer
 }
 
 function create_service() {
+	local BACKUP_NAME=$1
+
 	echo "[INFO] Copying configs"
-	cp "home-backup.service" "$HOME/.config/systemd/user/"
-	cp "home-backup.timer" "$HOME/.config/systemd/user/"
-	systemctl --user enable home-backup.service
+	cp "${BACKUP_NAME}.service" "$HOME/.config/systemd/user/"
+	cp "${BACKUP_NAME}.timer" "$HOME/.config/systemd/user/"
+	systemctl --user enable ${BACKUP_NAME}.service
 
 	echo "[INFO] Enabling SaveBackup 15 minute timer service"
-	systemctl --user enable home-backup.timer
+	systemctl --user enable ${BACKUP_NAME}.timer
 
 	echo "[INFO] Starting Timer"
-	rclone_start_service
+	rclone_start_service "${BACKUP_NAME}"
 }
 
 main() {
@@ -170,6 +189,26 @@ main() {
 
 			--backup|-b)
 				BACKUP="true"
+				;;
+
+    			--backup-name)
+				if [[ -n "$2" ]]; then
+					BACKUP_NAME="$2"
+					shift
+				else
+					echo -e "ERROR: This option requires an argument.\n" >&2
+					exit 1
+				fi
+				;;
+
+    			--remote-name)
+				if [[ -n "$2" ]]; then
+					REMOTE="$2"
+					shift
+				else
+					echo -e "ERROR: This option requires an argument.\n" >&2
+					exit 1
+				fi
 				;;
 
 			--help|-h)
@@ -198,13 +237,13 @@ main() {
 
 	if [[ ${INSTALL} == "true" ]]; then
 		install_rclone
-		configure
-		create_service
+		configure "${REMOTE}" "${BACKUP_NAME}"
+		create_service "${BACKUP_NAME}"
 		exit 0
 	fi	
 
 	if [[ ${CONFIGURE} == "true" ]]; then
-		configure
+		configure "${REMOTE}" "${BACKUP_NAME}"
 		exit 0
 	fi
 
@@ -236,8 +275,8 @@ main() {
 		fi
 
 		# Run clone
-		echo "[INFO] Running rclone to home-backup/${HOSTNAME}"
-		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/home-backup/include-from.txt ${START_PATH} home-backup-gdrive:home-backup/${HOSTNAME} -P"
+		echo "[INFO] Running rclone to ${BACKUP_NAME}/${HOSTNAME}"
+		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/${BACKUP_NAME}/include-from.txt ${START_PATH} ${REMOTE}:${REMOTE_FOLDER}/${HOSTNAME} -P"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
 		eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
