@@ -52,18 +52,9 @@ function install_rclone() {
 	cd rclone-*-linux-amd64
 
 	# Install
-	sudo cp -v rclone /usr/bin/
-	sudo chown root:root /usr/bin/rclone
-	sudo chmod 755 /usr/bin/rclone
-	sudo mkdir -p /usr/local/share/man/man1
-	sudo cp rclone.1 /usr/local/share/man/man1/
-	#sudo mandb
-	cd "${CURDIR}"
+	sudo cp -v rclone "${HOME}/.local/bin/rclone"
+	echo "[INFO] rclone has been installed to ${HOME}/.local/bin/rclone""
 
-	echo "[INFO] rclone has been installed to /usr/bin/rclone"
-
-	# Copy to alt path for OS's like ChimeraOS that wipe them on upgrade
-	sudo cp -v "/usr/bin/rclone" "${HOME}/.local/bin/rclone"
 }
 
 function configure() {
