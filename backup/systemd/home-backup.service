@@ -4,7 +4,7 @@ Description=rclone home backup service
 [Service]
 Type=simple
 Environment="SCRIPT_ARGS=--backup"
-ExecStart=%h/.config/home-backup/backup-manager.sh $SCRIPT_ARGS
+ExecStart=%h/.config/backup-configs/home-backup/backup-manager.sh $SCRIPT_ARGS
 CPUWeight=20
 CPUQuota=50%
 IOWeight=20
