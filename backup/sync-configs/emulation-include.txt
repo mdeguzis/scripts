@@ -13,5 +13,5 @@ ${HOME}/.config/retroarch/cheats
 ${HOME}/.config/retroarch/overlay
 ${HOME}/.emulationstation/collections
 ${HOME}/.emulationstation/es_settings.cfg
-${HOME}/ES-DE/*
-${HOME}/.supermodel"
+${HOME}/ES-DE
+${HOME}/.supermodel
