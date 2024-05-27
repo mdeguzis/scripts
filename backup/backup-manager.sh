@@ -117,14 +117,14 @@ function configure() {
 			base_path=$(dirname "${this_path}")
 			if [[ -d "${base_path}" ]]; then
 				echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
-				find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" \;
+				find -L "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" \;
 			fi
 
 		elif [[ -d "${this_path}" ]]; then
 			#echo "[INFO] Adding directory '${this_path}' to include-from.txt"
 			#echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
 			echo "[INFO] Adding directories in '${this_path}' to include-from.txt"
-			find "${this_path}" -type d  -exec test -e {} \; -print >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+			find -L "${this_path}" -type d  -exec test -e {} \; -print >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
 
 
 		elif [[ -f "${this_path}" ]]; then 
@@ -145,7 +145,6 @@ function configure() {
 			fi
 		done
 	done
-
 
 	#echo "[INFO] Checking paths for broken symlimks"
 	#for p in $(cat "${HOME}/.config/backup-configs/home-backup/include-from.txt");
