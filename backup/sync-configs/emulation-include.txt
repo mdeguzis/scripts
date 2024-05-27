@@ -1,0 +1,17 @@
+${HOME}/Emulation/saves
+${HOME}/Emulation/roms/model2/EMULATOR
+${HOME}/Emulation/roms/model2/CFG
+${HOME}/Emulation/roms/model2/*meta*
+${HOME}/Emulation/roms/model2/*pat
+${HOME}/Emulation/roms/model2/*ps
+${HOME}/Emulation/roms/model2/*lua
+${HOME}/Emulation/bios/BIOS-ARCHIVES
+${HOME}/.config/retroarch/saves
+${HOME}/.config/retroarch/retroarch.cfg
+${HOME}/.config/retroarch/config
+${HOME}/.config/retroarch/cheats
+${HOME}/.config/retroarch/overlay
+${HOME}/.emulationstation/collections
+${HOME}/.emulationstation/es_settings.cfg
+${HOME}/ES-DE/*
+${HOME}/.supermodel"

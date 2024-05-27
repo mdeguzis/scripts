@@ -1,0 +1,3 @@
+${HOME}/.zshrc
+${HOME}/.bashrc
+${HOME}/.vimrc

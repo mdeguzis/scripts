@@ -1,16 +1,19 @@
 #!/bin/bash
 # Description: Cloud backup manager
 
+# This causes the script to fail when running as the systemd service, check later...
+#set -e
+
 # Defaults
 CURDIR="${PWD}"
-CONFIG="${HOME}/.config/${REMOTE_FOLDER}"
+CONFIG="${HOME}/.config/backup-configs/home-backup"
 DATE=$(date +%Y%m%d-%H%M%S)
 GIT_ROOT=$(git rev-parse --show-toplevel)
 LOG_FILE="/tmp/backup-mgr-${DATE}.log"
-PIDFILE="/tmp/rclone.pid"
+PIDFILE="/tmp/home-backup-rclone.pid"
 HOSTNAME=$(cat /etc/hostname)
-REMOTE="${REMOTE:-${REMOTE_FOLDER}}"
-BACKUP_NAME="${BACKUP_NAME:-${REMOTE_FOLDER}}"
+REMOTE="${REMOTE:-onedrive}"
+BACKUP_LOG="/tmp/home-backup-job.log"
 
 if [[ -z "${HOSTNAME}" ]]; then
 	echo "[ERROR] Could not set hostname for remote!"
@@ -27,11 +30,12 @@ function finish {
 function show_help() {
 	cat<<-HELP_EOF
 	--help|-h			Show this help page
-	--install			Install rclone
-	--backup			Run backup
- 	--remote-name			The name of the rclone remote to use
-  	--backup-name			Use this remote folder name for service/target folder. No spaces.
-	--configure			Configure backup to S3
+	--install|-i			Install backup manager
+	--uninstall|-u			Uninstall backup manager
+	--list-remotes|-l		List available remotes
+	--backup|-b			Run backup
+	--status|-s			Backup service status
+	--remote-name			The name of the rclone remote to use
 
 	HELP_EOF
 	exit 0
@@ -61,9 +65,9 @@ function install_rclone() {
 
 function configure() {
 	local REMOTE=$1
- 	local REMOTE_FOLDER=$2
 
-	if ! rclone config show | grep -qw "\[${REMOTE}\]"; then
+	echo "[INFO] Checking for existence of remote ${REMOTE}"
+	if ! rclone config show | grep -qwE "\[${REMOTE}\]"; then
 		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
   		echo -e "Existing remotes:\n$(rclone listremotes)\n"
 		echo "[INFO] Please name the remote ${REMOTE}. Press ENTER to continue"
@@ -71,10 +75,16 @@ function configure() {
 		rclone config
 	fi
 
+	# Create remote folder if it does not exist
+	if ! rclone lsd ${REMOTE}: | grep -q "rclone-backups"; then
+		echo "[INFO] Creating rlcone-backups root at remote '${REMOTE}'"
+		rclone mkdir ${REMOTE}:rclone-backups
+	fi
+	
 	# Copy filter files to ${CONFIG} var location
-	mkdir -p "${HOME}/.config/${REMOTE_FOLDER}"
-	cp "backup-manager.sh" "${HOME}/.config/${REMOTE_FOLDER}"
-	cp "include-from.txt" "${HOME}/.config/${REMOTE_FOLDER}"
+	mkdir -p "${HOME}/.config/backup-configs/home-backup"
+	cp -v "backup-manager.sh" "${HOME}/.config/backup-configs/home-backup"
+	cp -v "include-from.txt" "${HOME}/.config/backup-configs/home-backup"
 
 	# Add env-variable based paths that change from system to system,
 	# e.g. $HOME
@@ -87,37 +97,25 @@ function configure() {
 	filters=()
 	filters+=(".*ES.*themes.*")
 
-	# Data
-	paths+=("${HOME}/Emulation/saves")
+	# Check sync-configs dir for any paths we want to sync
+	# Remove or configure files in this directory to remove syncs
+	for sync_config in $(ls sync-configs);
+	do
+		echo "[INFO] Configuring save config: ${sync_config}"
+		for p in $(cat "sync-configs/${sync_config}");
+		do
+			paths+=("${p}")
+		done
+	done
 
-	# Model 2 stuff is hard to setup, save!
-	paths+=("${HOME}/Emulation/roms/model2/EMULATOR*")
-	paths+=("${HOME}/Emulation/roms/model2/CFG")
-	paths+=("${HOME}/Emulation/roms/model2/*meta*")
-	paths+=("${HOME}/Emulation/roms/model2/*pat")
-	paths+=("${HOME}/Emulation/roms/model2/*ps")
-	paths+=("${HOME}/Emulation/roms/model2/*lua")
-	paths+=("${HOME}/Emulation/bios/BIOS-ARCHIVES")
-
- 	# Retroarch / ES
-  	paths+=("${HOME}/.config/retroarch/saves")
-	paths+=("${HOME}/.config/retroarch/retroarch.cfg")
- 	paths+=("${HOME}/.config/retroarch/config")
-  	paths+=("${HOME}/.config/retroarch/cheats")
-	paths+=("${HOME}/.config/retroarch/overlay")
- 	paths+=("${HOME}/.emulationstation/collections")
-  	paths+=("${HOME}/.emulationstation/es_settings.cfg")
-
-	# General configs to backup
-	paths+=("${HOME}/ES-DE/*")
-
-	# My general configs to save
-	paths+=("${HOME}/.supermodel")
-	paths+=("${HOME}/.bashrc")
-	paths+=("${HOME}/.zshrc")
-
+	# Check and configure paths
 	for this_path in ${paths[@]};
 	do
+		# TODO fix... idk why ${HOME} doesn't resolve in this script when checking..
+		# Checking the conditional in bash is fine, but it doesn't work below
+		# Resolve the path for now
+		this_path=$(echo "${this_path}" | sed "s|\${HOME}|${HOME}|")
+
 		skip=false
 		# Skip path?
 		for fpath in ${filters[@]};
@@ -134,46 +132,61 @@ function configure() {
 		echo "[INFO] Checking if path or file exists: '${this_path}'"
 		if echo \'${this_path}\' | grep -q '*'; then 
 			# Add glob
-			regex=$(basename "${path}")
-			base_path=$(dirname "${path}")
-			echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
-			find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt" \;
+			regex=$(basename "${this_path}")
+			base_path=$(dirname "${this_path}")
+			if [[ -d "${base_path}" ]]; then
+				echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
+				find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" \;
+			fi
 
 		elif [[ -d "${this_path}" ]]; then 
 			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
-			echo "${this_path}/**" >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt"
+			echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
 
-		elif [[ -f "${path}" ]]; then 
+		elif [[ -f "${this_path}" ]]; then 
 			echo "[INFO] Adding file '${this_path}' to include-from.txt"
-			echo "${this_path}" >> "${HOME}/.config/${REMOTE_FOLDER}/include-from.txt"
+			echo "${this_path}" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
 
 		fi
 	done
-
 }
 
 rclone_stop_service(){
-    systemctl --user stop ${BACKUP_NAME}.timer
-    systemctl --user stop ${BACKUP_NAME}.service
+    systemctl --user stop home-backup.timer
+    systemctl --user stop home-backup.service
 }
 
 rclone_start_service(){
-    systemctl --user start ${BACKUP_NAME}.timer
+    systemctl --user start home-backup.timer
 }
 
 function create_service() {
-	local BACKUP_NAME=$1
+	echo "[INFO] Copying systemd configs"
+	cp -v "systemd/home-backup.service" "${HOME}/.config/systemd/user/"
+	cp -v "systemd/home-backup.timer" "${HOME}/.config/systemd/user/"
 
-	echo "[INFO] Copying configs"
-	cp "${BACKUP_NAME}.service" "$HOME/.config/systemd/user/"
-	cp "${BACKUP_NAME}.timer" "$HOME/.config/systemd/user/"
-	systemctl --user enable ${BACKUP_NAME}.service
+	echo "[INFO] Enabling systemd service"
+	systemctl --user enable home-backup.service
 
 	echo "[INFO] Enabling SaveBackup 15 minute timer service"
-	systemctl --user enable ${BACKUP_NAME}.timer
+	systemctl --user enable home-backup.timer
 
 	echo "[INFO] Starting Timer"
-	rclone_start_service "${BACKUP_NAME}"
+	rclone_start_service "home-backup"
+}
+
+function disable_service() {
+	echo "[INFO] Removing systemd configs"
+	rm -fv "home-backup.service" "${HOME}/.config/systemd/user/home-backup.service"
+	rm -fv  "home-backup.timer" "${HOME}/.config/systemd/user/home-backup.timer"
+
+	echo "[INFO] Removing home-backup service"
+	systemctl --user stop home-backup.service
+	systemctl --user disable home-backup.service
+
+	echo "[INFO] Removing SaveBackup 15 minute timer service"
+	systemctl --user stop home-backup.timer
+	systemctl --user disable home-backup.timer
 }
 
 main() {
@@ -183,22 +196,20 @@ main() {
 				INSTALL="true"
 				;;
 
-			--configure|-c)
-				CONFIGURE="true"
+			--uninstall|-u)
+				UNINSTALL="true"
 				;;
 
 			--backup|-b)
 				BACKUP="true"
 				;;
 
-    			--backup-name)
-				if [[ -n "$2" ]]; then
-					BACKUP_NAME="$2"
-					shift
-				else
-					echo -e "ERROR: This option requires an argument.\n" >&2
-					exit 1
-				fi
+			--list-remotes|-l)
+				LIST_REMOTES="true"
+				;;
+
+			--status|-s)
+				STATUS="true"
 				;;
 
     			--remote-name)
@@ -234,16 +245,28 @@ main() {
 		# shift args
 		shift
 	done
+	echo
+
+	if [[ ${LIST_REMOTES} == "true" ]]; then
+		echo -e "\n[INFO] Listing available remotes to use:\n"
+		echo -e "$(rclone config show | grep -E '^\[.*]$' | sed 's/\[//g;s/\]//g')\n"
+		exit 0
+	fi
 
 	if [[ ${INSTALL} == "true" ]]; then
-		install_rclone
-		configure "${REMOTE}" "${BACKUP_NAME}"
-		create_service "${BACKUP_NAME}"
-		exit 0
-	fi	
+		if ! rclone --version &> /dev/null; then
+			install_rclone
+		fi	
 
-	if [[ ${CONFIGURE} == "true" ]]; then
-		configure "${REMOTE}" "${BACKUP_NAME}"
+		configure "${REMOTE}"
+		create_service
+
+	elif [[ ${UNINSTALL} == "true" ]]; then
+		disable_service
+		exit 0
+
+	elif [[ ${STATUS} == "true" ]]; then
+		systemctl --user status home-backup.service
 		exit 0
 	fi
 
@@ -276,14 +299,17 @@ main() {
 
 		# Run clone
 		echo "[INFO] Running rclone to ${BACKUP_NAME}/${HOSTNAME}"
-		cmd="/usr/bin/rclone copy --verbose --verbose -L --include-from ${HOME}/.config/${BACKUP_NAME}/include-from.txt ${START_PATH} ${REMOTE}:${REMOTE_FOLDER}/${HOSTNAME} -P"
+		cmd="rclone copy --verbose --verbose -L --include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
-		eval "${cmd}" 2>&1 | tee "/tmp/rclone-job.log"
+		eval "${cmd}" 2>&1 | tee "${BACKUP_LOG}"
 
 		if [ $? -eq 0 ]; then
-			echo "[INFO] Cleanaing PID file $PIDFILE"
-			rm $PIDFILE
+			echo "[INFO] Cleaning PID file $PIDFILE"
+			rm -f $PIDFILE
+		else
+			echo "[INFO] Backup failed! See ${LOG_FILE}"
+			exit 1
 		fi
 
 		# Trim logs
@@ -295,5 +321,5 @@ main() {
 # Start and log
 main "$@" 2>&1 | tee "${LOG_FILE}"
 echo "[INFO] Log: ${LOG_FILE}"
-echo "[INFO] clone operation log: /tmp/rclone-job.log"
+echo "[INFO] clone operation log: ${BACKUP_LOG}"
 
