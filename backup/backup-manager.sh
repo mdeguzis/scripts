@@ -61,6 +61,9 @@ function install_rclone() {
 	cd "${CURDIR}"
 
 	echo "[INFO] rclone has been installed to /usr/bin/rclone"
+
+	# Copy to alt path for OS's like ChimeraOS that wipe them on upgrade
+	sudo cp -v "/usr/bin/rclone" "${HOME}/.local/bin/rclone"
 }
 
 function configure() {
@@ -116,19 +119,6 @@ function configure() {
 		# Resolve the path for now
 		this_path=$(echo "${this_path}" | sed "s|\${HOME}|${HOME}|")
 
-		skip=false
-		# Skip path?
-		for fpath in ${filters[@]};
-		do
-			if echo "${this_path}" | grep -qE "${fpath}"; then
-				echo "[WARN] Skipping path '${this_path}' (filtered)"
-				skip=true
-			fi
-		done
-		if $skip; then
-			continue
-		fi
-
 		echo "[INFO] Checking if path or file exists: '${this_path}'"
 		if echo \'${this_path}\' | grep -q '*'; then 
 			# Add glob
@@ -139,9 +129,12 @@ function configure() {
 				find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" \;
 			fi
 
-		elif [[ -d "${this_path}" ]]; then 
-			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
-			echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+		elif [[ -d "${this_path}" ]]; then
+			#echo "[INFO] Adding directory '${this_path}' to include-from.txt"
+			#echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+			echo "[INFO] Adding directories in '${this_path}' to include-from.txt"
+			find "${this_path}" -type d  -exec test -e {} \; -print >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+
 
 		elif [[ -f "${this_path}" ]]; then 
 			echo "[INFO] Adding file '${this_path}' to include-from.txt"
@@ -149,6 +142,34 @@ function configure() {
 
 		fi
 	done
+
+	# Finally, trim any collectd paths using filter
+	for this_path in $(cat "${HOME}/.config/backup-configs/home-backup/include-from.txt");
+	do
+		for fpath in ${filters[@]};
+		do
+			if echo "${this_path}" | grep -qE "${fpath}"; then
+				echo "[WARN] Skipping path '${this_path}' (filtered)"
+				sed -i /$fpath/d "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+			fi
+		done
+	done
+
+
+	#echo "[INFO] Checking paths for broken symlimks"
+	#for p in $(cat "${HOME}/.config/backup-configs/home-backup/include-from.txt");
+	#do
+	#	# Files are already validated, only check dirs
+	#	# glob paths for rclone have '**;, remove
+	#	this_path=$(echo "${p}" | sed 's|**||g')
+	#	echo $this_path
+	#	# if path does not exist, delete 
+	#	for f in $(find "${this_path}" -type l ! -exec test -e {} \; -print);
+	#	do
+	#		echo "Checking: $f"
+	#	done
+	#done
+
 }
 
 rclone_stop_service(){
@@ -164,6 +185,9 @@ function create_service() {
 	echo "[INFO] Copying systemd configs"
 	cp -v "systemd/home-backup.service" "${HOME}/.config/systemd/user/"
 	cp -v "systemd/home-backup.timer" "${HOME}/.config/systemd/user/"
+
+	# Replace home var
+	sed -i "s|HOME_DIR|${HOME}|g"  "${HOME}/.config/systemd/user/home-backup.service"
 
 	echo "[INFO] Enabling systemd service"
 	systemctl --user enable home-backup.service
@@ -254,7 +278,7 @@ main() {
 	fi
 
 	if [[ ${INSTALL} == "true" ]]; then
-		if ! rclone --version &> /dev/null; then
+		if [[ ! -f "${HOME}/.local/bin/rclone" ]]; then
 			install_rclone
 		fi	
 
@@ -298,11 +322,16 @@ main() {
 		fi
 
 		# Run clone
+		# Need full path for rclone when running under system sevie
+		# ChimeraOS will whipe the system bits on upgrade, so don't use /usr/bin/rclone...
+		# Need to find a spot that isn't wiped
+
 		echo "[INFO] Running rclone to ${BACKUP_NAME}/${HOSTNAME}"
-		cmd="rclone copy --verbose --verbose -L --include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
+		cmd="${HOME}/.local/bin/rclone copy --verbose --verbose --copy-links--include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
-		eval "${cmd}" 2>&1 | tee "${BACKUP_LOG}"
+		#eval "${cmd}" 2>&1 | tee "${BACKUP_LOG}"
+		eval "${cmd}"
 
 		if [ $? -eq 0 ]; then
 			echo "[INFO] Cleaning PID file $PIDFILE"
