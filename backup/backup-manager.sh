@@ -89,7 +89,9 @@ function configure() {
 	# Filter
 	# Add any path (grep regex) to filter out when using '*' glob
 	filters=()
+	# These take up a lot of space for remotes <= 5GB (free), exclude for now
 	filters+=(".*ES.*themes.*")
+	filters+=(".*bios.*")
 
 	# Check sync-configs dir for any paths we want to sync
 	# Remove or configure files in this directory to remove syncs
