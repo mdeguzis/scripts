@@ -24,7 +24,7 @@ fi
 START_PATH="/"
 
 function finish {
-  echo "Script terminating. Exit code $?"
+  echo "[INFO] Script terminating. Exit code $?"
 }
 
 function show_help() {
@@ -336,19 +336,22 @@ main() {
 		if [ $? -eq 0 ]; then
 			echo "[INFO] Cleaning PID file $PIDFILE"
 			rm -f $PIDFILE
+			exit 0
 		else
 			echo "[INFO] Backup failed! See ${LOG_FILE}"
 			exit 1
 		fi
 
-		# Trim logs
-		echo "[INFO] Trimming logs"
-		find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
 	fi
 }
 
 # Start and log
 main "$@" 2>&1 | tee "${LOG_FILE}"
+
+# Trim logs
+echo "[INFO] Trimming logs"
+find /tmp -name "${LOG_FILE}*" -mtime 14 -exec -delete \; 2>/dev/null
+
 echo "[INFO] Log: ${LOG_FILE}"
 echo "[INFO] clone operation log: ${BACKUP_LOG}"
 
