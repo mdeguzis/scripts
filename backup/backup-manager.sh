@@ -53,7 +53,7 @@ function install_rclone() {
 
 	# Install
 	sudo cp -v rclone "${HOME}/.local/bin/rclone"
-	echo "[INFO] rclone has been installed to ${HOME}/.local/bin/rclone""
+	echo "[INFO] rclone has been installed to ${HOME}/.local/bin/rclone"
 
 }
 
