@@ -327,7 +327,7 @@ main() {
 		# Need to find a spot that isn't wiped
 
 		echo "[INFO] Running rclone to ${BACKUP_NAME}/${HOSTNAME}"
-		cmd="${HOME}/.local/bin/rclone copy --verbose --verbose --copy-links--include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
+		cmd="${HOME}/.local/bin/rclone copy --verbose --verbose --copy-links --include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
 		#eval "${cmd}" 2>&1 | tee "${BACKUP_LOG}"
