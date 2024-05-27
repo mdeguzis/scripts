@@ -61,7 +61,7 @@ function configure() {
 	local REMOTE=$1
 
 	echo "[INFO] Checking for existence of remote ${REMOTE}"
-	if ! rclone config show | grep -qwE "\[${REMOTE}\]"; then
+	if ! ${HOME}/.local/bin/rclone config show | grep -qwE "\[${REMOTE}\]"; then
 		echo -e "\n[INFO] Configuring rclone remote. Follow the directions at https://rclone.org/s3/"
   		echo -e "Existing remotes:\n$(rclone listremotes)\n"
 		echo "[INFO] Please name the remote ${REMOTE}. Press ENTER to continue"
@@ -70,9 +70,9 @@ function configure() {
 	fi
 
 	# Create remote folder if it does not exist
-	if ! rclone lsd ${REMOTE}: | grep -q "rclone-backups"; then
+	if ! ${HOME}/.local/bin/rclone lsd ${REMOTE}: | grep -q "rclone-backups"; then
 		echo "[INFO] Creating rlcone-backups root at remote '${REMOTE}'"
-		rclone mkdir ${REMOTE}:rclone-backups
+		${HOME}/.local/bin/rclone mkdir ${REMOTE}:rclone-backups
 	fi
 	
 	# Copy filter files to ${CONFIG} var location
@@ -264,7 +264,7 @@ main() {
 
 	if [[ ${LIST_REMOTES} == "true" ]]; then
 		echo -e "\n[INFO] Listing available remotes to use:\n"
-		echo -e "$(rclone config show | grep -E '^\[.*]$' | sed 's/\[//g;s/\]//g')\n"
+		echo -e "$(${HOME}/.local/bin/rclone config show | grep -E '^\[.*]$' | sed 's/\[//g;s/\]//g')\n"
 		exit 0
 	fi
 
