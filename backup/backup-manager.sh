@@ -123,12 +123,8 @@ function configure() {
 			fi
 
 		elif [[ -d "${this_path}" ]]; then
-			#echo "[INFO] Adding directory '${this_path}' to include-from.txt"
-			#echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
-			echo "[INFO] Adding directories in '${this_path}' to include-from.txt"
-			# Include all not matching file, as we want symlinks too
-			find "${this_path}" not -type f  -exec test -e {} \; -print >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" 2> /dev/null
-
+			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
+			echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
 
 		elif [[ -f "${this_path}" ]]; then 
 			echo "[INFO] Adding file '${this_path}' to include-from.txt"
