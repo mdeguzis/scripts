@@ -1,0 +1,3 @@
+# Last line of this file MUST be '- **' (exclude the rest) as otherwise you will start backing up the entire system!
+# Examples: https://rclone.org/filtering/#examples
+
