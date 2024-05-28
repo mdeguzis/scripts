@@ -31,6 +31,7 @@ function show_help() {
 	cat<<-HELP_EOF
 	--help|-h			Show this help page
 	--install|-i			Install backup manager
+	--dry-run			Dry-run test sync
 	--uninstall|-u			Uninstall backup manager
 	--list-remotes|-l		List available remotes
 	--backup|-b			Run backup
@@ -78,7 +79,8 @@ function configure() {
 	# Copy filter files to ${CONFIG} var location
 	mkdir -p "${HOME}/.config/backup-configs/home-backup"
 	cp -v "backup-manager.sh" "${HOME}/.config/backup-configs/home-backup"
-	cp -v "include-from.txt" "${HOME}/.config/backup-configs/home-backup"
+	cp -v "filter-from.txt" "${HOME}/.config/backup-configs/home-backup"
+	cp -v "exclude-list.txt" "${HOME}/.config/backup-configs/home-backup"
 
 	# Add env-variable based paths that change from system to system,
 	# e.g. $HOME
@@ -87,11 +89,30 @@ function configure() {
 	paths=()
 
 	# Filter
-	# Add any path (grep regex) to filter out when using '*' glob
-	filters=()
-	# These take up a lot of space for remotes <= 5GB (free), exclude for now
-	filters+=(".*ES.*themes.*")
-	filters+=(".*bios.*")
+	# Excludes take priority, add them first
+	for p in $(cat "exclude-list.txt");
+	do
+		this_path=$(echo "${p}" | sed "s|\${HOME}|${HOME}|")
+		echo "- ${this_path}" >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
+	done	
+
+	# Add a list of broken symlinks as excludes so they don't break rclone using --copy-links
+	echo "[INFO] Checking paths for broken symlimks"
+	for sync_config in $(ls sync-configs);
+	do
+		for p in $(cat "sync-configs/${sync_config}");
+		do
+			this_path=$(echo "${p}" | sed "s|**||;s|\${HOME}|${HOME}|")
+			# If path does not exist, exclude (broken symlink)
+			for f in $(find "${this_path}" -type l ! -exec test -e {} \; -print);
+			do
+				echo "- ${f}" >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
+			done
+		done
+	done
+
+	# pad
+	echo >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
 
 	# Check sync-configs dir for any paths we want to sync
 	# Remove or configure files in this directory to remove syncs
@@ -118,47 +139,23 @@ function configure() {
 			regex=$(basename "${this_path}")
 			base_path=$(dirname "${this_path}")
 			if [[ -d "${base_path}" ]]; then
-				echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to include-from.txt"
-				find "${base_path}" -name \""${regex}"\" -exec echo {} >> "${HOME}/.config/backup-configs/home-backup/include-from.txt" \; 2> /dev/null
+				echo "[INFO] Analyzing results of glob '${regex}' for path ${base_path} to filter-from.txt"
+				find "${base_path}" -name \""${regex}"\" -exec echo "+ {}" \; >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt" \; 2> /dev/null
 			fi
 
 		elif [[ -d "${this_path}" ]]; then
-			echo "[INFO] Adding directory '${this_path}' to include-from.txt"
-			echo "${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+			echo "[INFO] Adding directory '${this_path}' to filter-from.txt"
+			echo "+ ${this_path}/**" >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
 
 		elif [[ -f "${this_path}" ]]; then 
-			echo "[INFO] Adding file '${this_path}' to include-from.txt"
-			echo "${this_path}" >> "${HOME}/.config/backup-configs/home-backup/include-from.txt"
+			echo "[INFO] Adding file '${this_path}' to filter-from.txt"
+			echo "+ ${this_path}" >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
 
 		fi
 	done
 
-	# Finally, trim any collectd paths using filter
-	for this_path in $(cat "${HOME}/.config/backup-configs/home-backup/include-from.txt");
-	do
-		for fpath in ${filters[@]};
-		do
-			if echo "${this_path}" | grep -qE "${fpath}"; then
-				echo "[WARN] Skipping path '${this_path}' (filtered)"
-				sed -i /$fpath/d "${HOME}/.config/backup-configs/home-backup/include-from.txt"
-			fi
-		done
-	done
-
-	#echo "[INFO] Checking paths for broken symlimks"
-	#for p in $(cat "${HOME}/.config/backup-configs/home-backup/include-from.txt");
-	#do
-	#	# Files are already validated, only check dirs
-	#	# glob paths for rclone have '**;, remove
-	#	this_path=$(echo "${p}" | sed 's|**||g')
-	#	echo $this_path
-	#	# if path does not exist, delete 
-	#	for f in $(find "${this_path}" -type l ! -exec test -e {} \; -print);
-	#	do
-	#		echo "Checking: $f"
-	#	done
-	#done
-
+	# Last line of this file MUST be '- **' (exclude the rest) as otherwise you will start backing up the entire system!
+	echo -e "\n- **" >> "${HOME}/.config/backup-configs/home-backup/filter-from.txt"
 }
 
 rclone_stop_service(){
@@ -215,6 +212,11 @@ main() {
 
 			--backup|-b)
 				BACKUP="true"
+				;;
+
+			--dry-run)
+				DRY_RUN="true"
+				RCLONE_OPTS="--dry-run"
 				;;
 
 			--list-remotes|-l)
@@ -316,7 +318,7 @@ main() {
 		# Need to find a spot that isn't wiped
 
 		echo "[INFO] Running rclone to ${BACKUP_NAME}/${HOSTNAME}"
-		cmd="${HOME}/.local/bin/rclone copy --verbose --verbose --copy-links --include-from ${HOME}/.config/backup-configs/home-backup/include-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P"
+		cmd="${HOME}/.local/bin/rclone copy --verbose --verbose --copy-links --filter-from ${HOME}/.config/backup-configs/home-backup/filter-from.txt ${START_PATH} ${REMOTE}:rclone-backups/${HOSTNAME} -P ${RCLONE_OPTS}"
 		echo "[INFO] Running cmd: ${cmd}"
 		sleep 3
 		#eval "${cmd}" 2>&1 | tee "${BACKUP_LOG}"

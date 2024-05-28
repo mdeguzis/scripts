@@ -1,0 +1,2 @@
+${HOME}/ES-DE/themes/**
+${HOME}/Emulation/bios/**
