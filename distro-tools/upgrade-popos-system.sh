@@ -45,7 +45,7 @@ echo -e "\n###### Python user software update ######"
 if [[ ! -f "${HOME}/.local/bin/pipupgrade" ]]; then 
 	pip install pipupgrade
 fi
-pipupgrade --latest --yes
+pipupgrade --latest --yes --ignore-error
 
 echo -e "\n--------------------------------"
 echo "Running pop-upgrade..."
