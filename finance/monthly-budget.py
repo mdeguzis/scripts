@@ -10,6 +10,18 @@ import re
 
 from decimal import Decimal
 from pathlib import Path
+from enum import Enum
+
+# Define an Enum for expense categories
+class ExpenseCategory(Enum):
+    RENT = "rent"
+    UTILITIES = "utilities"
+    GROCERIES = "groceries"
+    TRANSPORTATION = "transportation"
+    ENTERTAINMENT = "entertainment"
+    HEALTHCARE = "healthcare"
+    MISCELLANEOUS = "miscellaneous"
+    UNKNOWN = "unknown"
 
 # Default json library doesn't like to serialize decimal :)
 # Convert Decimal objects to strings before serializing to JSON
@@ -29,6 +41,7 @@ def analyze_capitalone_csv(file_path):
     except Exception as e:
         print(f"Error reading the CSV file: {e}")
 
+# TODO - Maybe make this work for any pdf and "oursource" certain things to other methods
 def analyze_capitalone_pdf(file_path, accumulated_data=None):
     parsed_data = accumulated_data or {}
     
@@ -215,9 +228,27 @@ def main(args, report_filename):
     if args.print:
         logger.info(json.dumps(transaction_data, indent=4, default=decimal_default))
 
+    # Add high level info for budgeting
+    transaction_data["budget"] = {}
+    transaction_data["budget"]["breakdown"] = {}
+
+    # Capital one budget information
+    transaction_data["budget"]["breakdown"]["capital_one"] = {}
+    transaction_data["budget"]["breakdown"]["capital_one"]
+    for user, value in transaction_data["capital_one"].items():
+        if value:
+            total_expenses = value["transactions_total_amount"]
+            transaction_data["budget"]["breakdown"]["capital_one"][user] = {}
+            transaction_data["budget"]["breakdown"]["capital_one"][user]["expenses"] = total_expenses
+    exit
+
+    # Sort main keys so "budget" key is on top
+    sorted_data = {key: transaction_data[key] for key in sorted(transaction_data)}
+
     # Write report
     with open(report_filename, "w") as outfile:
-        json.dump(transaction_data, outfile, indent=4, default=decimal_default)
+        json.dump(sorted_data, outfile, indent=4, default=decimal_default)
+
 
 if __name__ == "__main__":
     args = process_args()
@@ -245,7 +276,6 @@ if __name__ == "__main__":
     logger.addHandler(file_handler)
 
     main(args, report_filename)
-
 
     print(f"Log: {log_filename}")
     print(f"Transactions report: {report_filename}")
