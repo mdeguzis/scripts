@@ -42,10 +42,12 @@ echo -e "\n###### Python user software update ######"
 #        fi
 #    done
 
+# Python env on PopOS (Cosmic Alpha) has a manged environment
+# Use pipx now
 if [[ ! -f "${HOME}/.local/bin/pipupgrade" ]]; then 
-	pip install pipupgrade
+	pipx install pipupgrade
 fi
-pipupgrade --latest --yes --ignore-error
+pipx run pipupgrade --latest --yes --ignore-error
 
 echo -e "\n--------------------------------"
 echo "Running pop-upgrade..."
