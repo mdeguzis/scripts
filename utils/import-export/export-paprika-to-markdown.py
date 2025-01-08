@@ -133,9 +133,9 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"Rating: {'★' * int(rating)}<br>\n"
     markdown_content += f"Categories: {categories}<br>\n"
     markdown_content += f"Source: {source_url_formatted}<br>\n"
-    markdown_content += f"Prep time:{prep_time}<br>\n"
-    markdown_content += f"Cook time:{cook_time}<br>\n"
-    markdown_content += f"Total time:{total_time}<br>\n"
+    markdown_content += f"Prep time: {prep_time}<br>\n"
+    markdown_content += f"Cook time: {cook_time}<br>\n"
+    markdown_content += f"Total time: {total_time}<br>\n"
     markdown_content += f"Servings: {servings}\n"
     markdown_content += "</div>\n\n"
 
