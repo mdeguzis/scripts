@@ -209,8 +209,6 @@ if __name__ == "__main__":
         print(f"Found latest file: {latest_file}")
         args.file = latest_file
 
-    if not args
-
     if not os.path.exists(args.file):
         print(f"Error: File {args.file} does not exist.")
     else:
