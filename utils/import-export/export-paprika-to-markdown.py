@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import gzip
 import json
 import logging
 import os
+import shutil
 import zipfile
 import re
 
@@ -238,7 +240,6 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
 
 
 if __name__ == "__main__":
-    import argparse
 
     parser = argparse.ArgumentParser(
         description="Convert Paprika 3 recipes to Markdown."
@@ -288,4 +289,6 @@ if __name__ == "__main__":
     else:
         process_paprika_to_markdown(args.file, args.output_dir)
 
+    # Copy log to output dir
+    shutil.copy(log_file, args.output_dir)
     logging.info(f"Done. Log: {log_file}")
