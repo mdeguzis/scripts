@@ -3,6 +3,7 @@
 import gzip
 import json
 import os
+import re
 import zipfile
 
 
@@ -178,12 +179,32 @@ if __name__ == "__main__":
         description="Convert Paprika 3 recipes to Markdown."
     )
     parser.add_argument(
-        "-f", "--file", required=True, help="Path to the .paprikarecipes file."
+        "-f", "--file", help="Path to the .paprikarecipes file."
     )
+    parser.add_argument("-i", "--input-dir",
+                        help="Input directory. This will export the latest file found.")
     parser.add_argument("-o", "--output-dir", required=True, help="Output directory.")
     args = parser.parse_args()
 
+    if not args.file and not args.input_dir:
+        print("Please provide either a file or an input directory.")
+        exit(1)
     os.makedirs(args.output_dir, exist_ok=True)
+
+    if args.input_dir:
+        # Find the latest file in the directory that matches the regex:
+        # Export YYYY-MM-DD.*All Recipes.paprikarecipes.zip
+        regex = re.compile(r"Export \d{4}-\d{2}-\d{2}.*All Recipes.paprikarecipes.zip")
+        latest_file = None
+        for file_name in os.listdir(args.input_dir):
+            if regex.match(file_name):
+                file_path = os.path.join(args.input_dir, file_name)
+                if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(latest_file):
+                    latest_file = file_path
+
+        print(f"Found latest file: {latest_file}")
+        args.file = latest_file
+
     if not os.path.exists(args.file):
         print(f"Error: File {args.paprika_file} does not exist.")
     else:
