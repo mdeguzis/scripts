@@ -84,6 +84,7 @@ def convert_json_to_markdown(json_file, output_dir):
     cook_time = recipe_data.get("cook_time", "")
     total_time = recipe_data.get("total_time", "")
     difficulty = recipe_data.get("difficulty", "")
+    categories = ", ".join(recipe_data.get("categories", ""))
     servings = recipe_data.get("servings", "")
     rating = recipe_data.get("rating", "")
     source = recipe_data.get("source", "")
@@ -91,6 +92,7 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Photo data
     # Assuming photo_data contains the base64 string
+    source_url_formatted = f'<a href="{source_url}">{source}</a>'
     markdown_content = ""
     if photo_data := recipe_data.get("photo_data", ""):
         image_data = f"data:image/jpeg;base64,{photo_data}"
@@ -99,8 +101,10 @@ def convert_json_to_markdown(json_file, output_dir):
         markdown_content += "</div>\n\n"
 
     # Top summary info
-    # Top summary info
     markdown_content += '<div style="float: right;">\n'
+    markdown_content += f"Rating: {'★' * int(rating)}<br>\n"
+    markdown_content += f"Categories: {categories}<br>\n"
+    markdown_content += f"Source: {source_url_formatted}<br>\n"
     markdown_content += f"Prep time:{prep_time}<br>\n"
     markdown_content += f"Cook time:{cook_time}<br>\n"
     markdown_content += f"Total time:{total_time}<br>\n"
@@ -125,7 +129,26 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"* Source: {source}\n"
     markdown_content += f"* Source URL: {source_url}\n\n"
 
+    # Make an output_dir sub_dir based on preset catetories I set
+    # This is first-come-first server to place recipes until I
+    # have a better solution
+    sub_folder_name = None
+    if "soup" in categories.lower():
+        sub_folder_name = "soup"
+    elif "chicken" in categories.lower():
+        sub_folder_name = "chicken"
+    elif "beef" in categories.lower():
+        sub_folder_name = "beef"
+    elif "pork" in categories.lower():
+        sub_folder_name = "pork"
+    elif "fish" in categories.lower():
+        sub_folder_name = "fish"
+
+    if sub_folder_name:
+        output_dir = os.path.join(output_dir, sub_folder_name)
+        os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{title}.md")
+
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
