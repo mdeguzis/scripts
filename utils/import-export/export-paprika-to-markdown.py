@@ -3,8 +3,10 @@
 import gzip
 import json
 import os
-import re
 import zipfile
+import re
+
+from datetime import datetime
 
 
 def extract_paprika_file(paprika_file, extract_dir):
@@ -35,8 +37,8 @@ def decompress_recipes(paprika_file, extract_dir):
         zip_ref.extractall(extract_dir)
 
     for file_name in os.listdir(extract_dir):
-        print(f"Decompressing recipe: {file_name}")
         if file_name.endswith(".paprikarecipe"):
+            print(f"Decompressing recipe: {file_name}")
             file_path = os.path.join(extract_dir, file_name)
             with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
                 json_data = gz_file.read()
@@ -64,7 +66,6 @@ def decompress_recipes(paprika_file, extract_dir):
 def convert_json_to_markdown(json_file, output_dir):
     """Converts a single JSON recipe file to Markdown format."""
 
-    print("Converting JSON to Markdown")
     with open(json_file, "r", encoding="utf-8") as f:
         recipe_data = json.load(f)
 
@@ -152,10 +153,19 @@ def convert_json_to_markdown(json_file, output_dir):
         os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{title}.md")
 
+    # Check if file exists and skip if overwrite is False
+    if os.path.exists(output_file) and not args.update:
+        print(f"Skipping existing file: {output_file}. Use --update to force changes.")
+        return
+        
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(markdown_content)
+
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
     print(f"Converted to Markdown: {output_file}")
+    return output_file
 
 
 def process_paprika_to_markdown(paprika_file, extract_dir):
@@ -167,15 +177,41 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
     json_output_dir = os.path.join(extract_dir, "json")
     print(f"Converting recipes to Markdown in: {json_output_dir}")
     processed = False
+
+    # Keep track of processed files for sync
+    processed_files = set()
     for file_name in os.listdir(json_output_dir):
         if file_name.endswith(".json"):
             json_file = os.path.join(json_output_dir, file_name)
-            convert_json_to_markdown(json_file, extract_dir)
-            processed = True
+            output_file = convert_json_to_markdown(json_file, extract_dir)
+            if output_file:
+                processed_files.add(output_file)
+            processed = True 
 
     if not processed:
         print("No recipes found to convert.")
         return
+
+    if args.sync:
+        print("Syncing: Removing old recipes not found in source data...")
+        for root, _, files in os.walk(extract_dir):
+            if "json" in root:
+                continue
+            for file in files:
+                if file.endswith(".md"):
+                    full_path = os.path.join(root, file)
+                    if full_path not in processed_files:
+                        print(f"Removing old recipe that do not exist in source: {full_path}")
+                        os.remove(full_path)
+
+    # Write a success file with current date/time
+    current_time = datetime.now().strftime('%Y-%m-%d:%H.%M.%S')
+    success_file = os.path.join(
+        extract_dir,
+        f"last-exported.txt"
+    )
+    with open(success_file, "w", encoding="utf-8") as f:
+        f.write(f"Export successful: {current_time}\n")
 
     print(f"All recipes converted to Markdown in: {extract_dir}")
 
@@ -192,6 +228,10 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input-dir",
                         help="Input directory. This will export the latest file found.")
     parser.add_argument("-o", "--output-dir", required=True, help="Output directory.")
+    parser.add_argument("-u", "--update", action="store_true", default=False,
+                   help="Overwrite/update existing markdown files")
+    parser.add_argument("-s", "--sync", action="store_true", default=False,
+                   help="Remove recipes in output directory that don't exist in source")
     args = parser.parse_args()
 
     if not args.file and not args.input_dir:
