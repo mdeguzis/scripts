@@ -41,8 +41,10 @@ def decompress_recipes(paprika_file, extract_dir):
             with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
                 json_data = gz_file.read()
 
-            file_name = file_name.lower().replace(" ", "-")
-            json_file_path = os.path.join(output_dir, os.path.basename(json_file_path))
+             # Create the json filename (lowercase, spaces to dashes)
+            json_filename = os.path.splitext(file_name)[0].lower().replace(" ", "-") + ".json"
+            # Create the full path in the json subdirectory
+            json_file_path = os.path.join(extract_dir, "json", json_filename)
             with open(json_file_path, "w", encoding="utf-8") as json_file:
                 json_file.write(json_data)
 
@@ -162,10 +164,18 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
     print("Converting recipes to Markdown")
     decompress_recipes(paprika_file, extract_dir)
 
-    for file_name in os.listdir(extract_dir):
+    json_output_dir = os.path.join(extract_dir, "json")
+    print(f"Converting recipes to Markdown in: {json_output_dir}")
+    processed = False
+    for file_name in os.listdir(json_output_dir):
         if file_name.endswith(".json"):
-            json_file = os.path.join(extract_dir, file_name)
+            json_file = os.path.join(json_output_dir, file_name)
             convert_json_to_markdown(json_file, extract_dir)
+            processed = True
+
+    if not processed:
+        print("No recipes found to convert.")
+        return
 
     print(f"All recipes converted to Markdown in: {extract_dir}")
 
