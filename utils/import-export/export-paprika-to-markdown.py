@@ -97,6 +97,7 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Split ingredients to list
     ingredients = recipe_data.get("ingredients", "")
+    ingredients = "- " + ingredients
     ingredients = ingredients.replace("\n", "\n- ")
 
     # Number instructions
