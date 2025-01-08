@@ -206,6 +206,6 @@ if __name__ == "__main__":
         args.file = latest_file
 
     if not os.path.exists(args.file):
-        print(f"Error: File {args.paprika_file} does not exist.")
+        print(f"Error: File {args.file} does not exist.")
     else:
         process_paprika_to_markdown(args.file, args.output_dir)
