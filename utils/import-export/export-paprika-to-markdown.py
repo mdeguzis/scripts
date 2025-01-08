@@ -194,7 +194,8 @@ if __name__ == "__main__":
     if args.input_dir:
         # Find the latest file in the directory that matches the regex:
         # Export YYYY-MM-DD.*All Recipes.paprikarecipes.zip
-        regex = re.compile(r"Export \d{4}-\d{2}-\d{2}.*All Recipes.paprikarecipes.zip")
+        # Make .zip optional, as on *Nix systems, this is not present
+        regex = re.compile(r"Export \d{4}-\d{2}-\d{2}.*All Recipes\.paprikarecipes(\.zip)?$")
         latest_file = None
         for file_name in os.listdir(args.input_dir):
             if regex.match(file_name):
@@ -202,8 +203,13 @@ if __name__ == "__main__":
                 if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(latest_file):
                     latest_file = file_path
 
+        if not latest_file:
+            print("No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip")
+            exit(1)
         print(f"Found latest file: {latest_file}")
         args.file = latest_file
+
+    if not args
 
     if not os.path.exists(args.file):
         print(f"Error: File {args.file} does not exist.")
