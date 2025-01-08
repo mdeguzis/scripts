@@ -2,43 +2,61 @@
 
 import gzip
 import json
+import logging
 import os
 import zipfile
 import re
 
 from datetime import datetime
 
+log_file = "/tmp/paprika-export.log"
+
+def setup_logger(debug=False):
+    """Configure logging with optional debug level."""
+    log_file = "/tmp/paprika-export.log"
+    level = logging.DEBUG if debug else logging.INFO
+    
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+
+
 
 def extract_paprika_file(paprika_file, extract_dir):
     """Extracts the main Paprika export zip file."""
     if not zipfile.is_zipfile(paprika_file):
-        print(f"Error: {paprika_file} is not a valid zip file.")
+        logging.error(f"{paprika_file} is not a valid zip file.")
         return None
 
     os.makedirs(extract_dir, exist_ok=True)
     with zipfile.ZipFile(paprika_file, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
-    print(f"Extracted Paprika recipes to: {extract_dir}")
+    logging.info(f"Extracted Paprika recipes to: {extract_dir}")
     return extract_dir
 
 
 def decompress_recipes(paprika_file, extract_dir):
     """Decompresses all `.paprikarecipe` (gzip) files in the directory."""
 
-    print(f"Decompressing Paprika file {paprika_file}")
+    logging.debug(f"Decompressing Paprika file {paprika_file}")
 
     output_dir = os.path.join(extract_dir, "json")
     os.makedirs(output_dir, exist_ok=True)
 
     # First, extract all files from the zip archive
-    print(f"Extracting recipes from {paprika_file}")
+    logging.info(f"Extracting recipes from {paprika_file}")
     with zipfile.ZipFile(paprika_file, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
     for file_name in os.listdir(extract_dir):
         if file_name.endswith(".paprikarecipe"):
-            print(f"Decompressing recipe: {file_name}")
+            logging.debug(f"Decompressing recipe: {file_name}")
             file_path = os.path.join(extract_dir, file_name)
             with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
                 json_data = gz_file.read()
@@ -55,7 +73,7 @@ def decompress_recipes(paprika_file, extract_dir):
 
             # Remove the original .paprikarecipe file
             os.remove(file_path)
-            print(f"Decompressed: {file_name} to {json_file_path}")
+            logging.debug(f"Decompressed: {file_name} to {json_file_path}")
 
     # Remove all .paprikareDecompressing Paprika filcipe files from the extract dir
     for file_name in os.listdir(extract_dir):
@@ -155,7 +173,7 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Check if file exists and skip if overwrite is False
     if os.path.exists(output_file) and not args.update:
-        print(f"Skipping existing file: {output_file}. Use --update to force changes.")
+        logging.warning(f"Skipping existing file: {output_file}. Use --update to force changes.")
         return
         
     with open(output_file, "w", encoding="utf-8") as f:
@@ -164,18 +182,18 @@ def convert_json_to_markdown(json_file, output_dir):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
-    print(f"Converted to Markdown: {output_file}")
+    logging.info(f"Converted to Markdown: {output_file}")
     return output_file
 
 
 def process_paprika_to_markdown(paprika_file, extract_dir):
     """Main process to convert Paprika file to Markdown."""
 
-    print("Converting recipes to Markdown")
+    logging.info("Converting recipes to Markdown")
     decompress_recipes(paprika_file, extract_dir)
 
     json_output_dir = os.path.join(extract_dir, "json")
-    print(f"Converting recipes to Markdown in: {json_output_dir}")
+    logging.info(f"Converting recipes to Markdown in: {json_output_dir}")
     processed = False
 
     # Keep track of processed files for sync
@@ -189,11 +207,11 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
             processed = True 
 
     if not processed:
-        print("No recipes found to convert.")
+        logging.error("No recipes found to convert.")
         return
 
     if args.sync:
-        print("Syncing: Removing old recipes not found in source data...")
+        logging.warning("Syncing: Removing old recipes not found in source data...")
         for root, _, files in os.walk(extract_dir):
             if "json" in root:
                 continue
@@ -201,7 +219,7 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
                 if file.endswith(".md"):
                     full_path = os.path.join(root, file)
                     if full_path not in processed_files:
-                        print(f"Removing old recipe that do not exist in source: {full_path}")
+                        logging.info(f"Removing old recipe that do not exist in source: {full_path}")
                         os.remove(full_path)
 
     # Write a success file with current date/time
@@ -213,7 +231,7 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
     with open(success_file, "w", encoding="utf-8") as f:
         f.write(f"Export successful: {current_time}\n")
 
-    print(f"All recipes converted to Markdown in: {extract_dir}")
+    logging.info(f"All recipes converted to Markdown in: {extract_dir}")
 
 
 if __name__ == "__main__":
@@ -222,6 +240,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Convert Paprika 3 recipes to Markdown."
     )
+    parser.add_argument("--debug", action="store_true", default=False,
+                       help="Enable debug logging")
     parser.add_argument(
         "-f", "--file", help="Path to the .paprikarecipes file."
     )
@@ -234,8 +254,11 @@ if __name__ == "__main__":
                    help="Remove recipes in output directory that don't exist in source")
     args = parser.parse_args()
 
+    # logging
+    setup_logger(args.debug)
+
     if not args.file and not args.input_dir:
-        print("Please provide either a file or an input directory.")
+        logging.info("Please provide either a file or an input directory.")
         exit(1)
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -252,12 +275,14 @@ if __name__ == "__main__":
                     latest_file = file_path
 
         if not latest_file:
-            print("No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip")
+            logging.error("No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip")
             exit(1)
-        print(f"Found latest file: {latest_file}")
+        logging.info(f"Found latest file: {latest_file}")
         args.file = latest_file
 
     if not os.path.exists(args.file):
-        print(f"Error: File {args.file} does not exist.")
+        logging.info(f"Error: File {args.file} does not exist.")
     else:
         process_paprika_to_markdown(args.file, args.output_dir)
+
+    logging.info(f"Done. Log: {log_file}")
