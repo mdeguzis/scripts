@@ -9,14 +9,14 @@ import re
 
 from datetime import datetime
 
-# Log file should store to user home dir, as /tmp is not always accesible
-# on all devices
-home_dir = os.path.expanduser("~")
-log_file = f"{home_dir}/paprika-export.log"
 
 def setup_logger(debug=False):
-    """Configure logging with optional debug level."""
-    log_file = "/tmp/paprika-export.log"
+    """
+    Configure logging with optional debug level.
+    # Log file should store to user home dir, as /tmp is not always accessible on all devices
+    """
+    home_dir = os.path.expanduser("~")
+    log_file = f"{home_dir}/paprika-export.log"
     level = logging.DEBUG if debug else logging.INFO
     
     logging.basicConfig(
