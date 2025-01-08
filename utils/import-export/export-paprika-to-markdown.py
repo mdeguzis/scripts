@@ -26,8 +26,8 @@ def decompress_recipes(paprika_file, extract_dir):
 
     print(f"Decompressing Paprika file {paprika_file}")
 
-    # Create a directory for the extracted recipes
-    os.makedirs(extract_dir, exist_ok=True)
+    output_dir = os.path.join(extract_dir, "json")
+    os.makedirs(output_dir, exist_ok=True)
 
     # First, extract all files from the zip archive
     print(f"Extracting recipes from {paprika_file}")
@@ -42,7 +42,7 @@ def decompress_recipes(paprika_file, extract_dir):
                 json_data = gz_file.read()
 
             file_name = file_name.lower().replace(" ", "-")
-            json_file_path = os.path.splitext(file_path)[0] + ".json"
+            json_file_path = os.path.join(output_dir, os.path.basename(json_file_path))
             with open(json_file_path, "w", encoding="utf-8") as json_file:
                 json_file.write(json_data)
 
@@ -161,15 +161,13 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
 
     print("Converting recipes to Markdown")
     decompress_recipes(paprika_file, extract_dir)
-    output_dir = os.path.join(extract_dir, "markdown_recipes")
-    os.makedirs(output_dir, exist_ok=True)
 
     for file_name in os.listdir(extract_dir):
         if file_name.endswith(".json"):
             json_file = os.path.join(extract_dir, file_name)
-            convert_json_to_markdown(json_file, output_dir)
+            convert_json_to_markdown(json_file, extract_dir)
 
-    print(f"All recipes converted to Markdown in: {output_dir}")
+    print(f"All recipes converted to Markdown in: {extract_dir}")
 
 
 if __name__ == "__main__":
