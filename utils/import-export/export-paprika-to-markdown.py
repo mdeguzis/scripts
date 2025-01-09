@@ -152,6 +152,10 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"* Source: {source}\n"
     markdown_content += f"* Source URL: {source_url}\n\n"
 
+    # Replace any lines with only "*" with "" 
+    # These are usually from ingredient parsing
+    markdown_content = re.sub(r'^\*\s*$', '', markdown_content, flags=re.MULTILINE)
+
     # Make an output_dir sub_dir based on preset catetories I set
     # This is first-come-first serve processing to place recipes until I
     # have a better solution
