@@ -158,19 +158,26 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"* Source URL: {source_url}\n\n"
 
     # Make an output_dir sub_dir based on preset catetories I set
-    # This is first-come-first server to place recipes until I
+    # This is first-come-first serve processing to place recipes until I
     # have a better solution
     sub_folder_name = None
-    if "soup" in categories.lower():
-        sub_folder_name = "soup"
-    elif "chicken" in categories.lower():
-        sub_folder_name = "chicken"
-    elif "beef" in categories.lower():
-        sub_folder_name = "beef"
-    elif "pork" in categories.lower():
-        sub_folder_name = "pork"
-    elif "fish" in categories.lower():
-        sub_folder_name = "fish"
+    if len(categories) == 1:
+        sub_folder_name = categories.lower()
+    else:
+        if "soup" in categories.lower():
+            sub_folder_name = "soup"
+        elif "chicken" in categories.lower():
+            sub_folder_name = "chicken"
+        elif "bread" in categories.lower():
+            sub_folder_name = "bread"
+        elif "beef" in categories.lower():
+            sub_folder_name = "beef"
+        elif "pork" in categories.lower():
+            sub_folder_name = "pork"
+        elif "fish" in categories.lower():
+            sub_folder_name = "fish"
+        else:
+            sub_folder_name = "uncategorized"
 
     if sub_folder_name:
         output_dir = os.path.join(output_dir, sub_folder_name)
