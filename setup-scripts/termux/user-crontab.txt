@@ -1,0 +1,1 @@
+0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-paprika-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/paprika-export --update --sync
