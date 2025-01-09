@@ -129,7 +129,7 @@ def convert_json_to_markdown(json_file, output_dir):
         markdown_content += "</div>\n\n"
 
     # Top summary info
-    markdown_content += '<div style="float: right;">\n'
+    markdown_content += '<div style="float: left;">\n\n'
     markdown_content += f"Rating: {'★' * int(rating)}<br>\n"
     markdown_content += f"Categories: {categories}<br>\n"
     markdown_content += f"Source: {source_url_formatted}<br>\n"
