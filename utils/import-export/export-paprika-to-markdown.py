@@ -80,11 +80,6 @@ def decompress_recipes(paprika_file, extract_dir):
             os.remove(file_path)
             logging.debug(f"Decompressed: {file_name} to {json_file_path}")
 
-    # Remove all .paprikareDecompressing Paprika filcipe files from the extract dir
-    for file_name in os.listdir(extract_dir):
-        if file_name.endswith(".paprikarecipe"):
-            os.remove(os.path.join(extract_dir, file_name))
-
 
 def convert_json_to_markdown(json_file, output_dir):
     """Converts a single JSON recipe file to Markdown format."""
