@@ -27,6 +27,9 @@ pkg install \
 	xz-utils \
 	zstd
 
+echo -e "\n[INFO] Running upgrade"
+pkg upgrade
+
 # https://wiki.termux.com/wiki/Termux-services
 echo -e "\n[INFO] Activating services"
 services=()
