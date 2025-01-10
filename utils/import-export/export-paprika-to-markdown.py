@@ -5,14 +5,16 @@ import gzip
 import json
 import logging
 import os
+import re
 import shutil
 import zipfile
-import re
-
 from datetime import datetime
+
+zipfile
 
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/paprika-export.log"
+
 
 def setup_logger(debug=False):
     """
@@ -20,16 +22,12 @@ def setup_logger(debug=False):
     # Log file should store to user home dir, as /tmp is not always accessible on all devices
     """
     level = logging.DEBUG if debug else logging.INFO
-    
+
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
-
 
 
 def extract_paprika_file(paprika_file, extract_dir):
@@ -66,8 +64,10 @@ def decompress_recipes(paprika_file, extract_dir):
             with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
                 json_data = gz_file.read()
 
-             # Create the json filename (lowercase, spaces to dashes)
-            json_filename = os.path.splitext(file_name)[0].lower().replace(" ", "-") + ".json"
+            # Create the json filename (lowercase, spaces to dashes)
+            json_filename = (
+                os.path.splitext(file_name)[0].lower().replace(" ", "-") + ".json"
+            )
             # Create the full path in the json subdirectory
             json_file_path = os.path.join(extract_dir, "json", json_filename)
             with open(json_file_path, "w", encoding="utf-8") as json_file:
@@ -90,10 +90,19 @@ def convert_json_to_markdown(json_file, output_dir):
     title = recipe_data.get("name", "Untitled Recipe")
     title = title.lower().replace(" ", "-")
 
-    # Split ingredients to list
+    # Handle ingredients that may not have sections
     ingredients = recipe_data.get("ingredients", "")
-    ingredients = "- " + ingredients
-    ingredients = ingredients.replace("\n", "\n- ")
+    # First split on double newlines to get sections
+    sections = ingredients.split("\n\n")
+    formatted_sections = []
+    for section in sections:
+        # Split each section on single newlines
+        lines = section.split("\n")
+        # Add dash to lines after the first one in each section
+        formatted_lines = [lines[0]] + [f"- {line}" for line in lines[1:]]
+        formatted_sections.append("\n".join(formatted_lines))
+    # Join sections back with double newlines
+    ingredients = "\n\n".join(formatted_sections)
 
     # Number instructions
     instructions = recipe_data.get("directions", "")
@@ -152,9 +161,9 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"* Source: {source}\n"
     markdown_content += f"* Source URL: {source_url}\n\n"
 
-    # Replace any lines with only "*" with "" 
+    # Replace any lines with only "*" with ""
     # These are usually from ingredient parsing
-    markdown_content = re.sub(r'^\*\s*$', '', markdown_content, flags=re.MULTILINE)
+    markdown_content = re.sub(r"^\*\s*$", "", markdown_content, flags=re.MULTILINE)
 
     # Make an output_dir sub_dir based on preset catetories I set
     # This is first-come-first serve processing to place recipes until I
@@ -185,9 +194,11 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Check if file exists and skip if overwrite is False
     if os.path.exists(output_file) and not args.update:
-        logging.warning(f"Skipping existing file: {output_file}. Use --update to force changes.")
+        logging.warning(
+            f"Skipping existing file: {output_file}. Use --update to force changes."
+        )
         return
-        
+
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
@@ -216,7 +227,7 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
             output_file = convert_json_to_markdown(json_file, extract_dir)
             if output_file:
                 processed_files.add(output_file)
-            processed = True 
+            processed = True
 
     if not processed:
         logging.error("No recipes found to convert.")
@@ -231,15 +242,14 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
                 if file.endswith(".md"):
                     full_path = os.path.join(root, file)
                     if full_path not in processed_files:
-                        logging.info(f"Removing old recipe that do not exist in source: {full_path}")
+                        logging.info(
+                            f"Removing old recipe that do not exist in source: {full_path}"
+                        )
                         os.remove(full_path)
 
     # Write a success file with current date/time
-    current_time = datetime.now().strftime('%Y-%m-%d:%H.%M.%S')
-    success_file = os.path.join(
-        extract_dir,
-        f"last-exported.txt"
-    )
+    current_time = datetime.now().strftime("%Y-%m-%d:%H.%M.%S")
+    success_file = os.path.join(extract_dir, f"last-exported.txt")
     with open(success_file, "w", encoding="utf-8") as f:
         f.write(f"Export successful: {current_time}\n")
 
@@ -251,18 +261,30 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Convert Paprika 3 recipes to Markdown."
     )
-    parser.add_argument("--debug", action="store_true", default=False,
-                       help="Enable debug logging")
     parser.add_argument(
-        "-f", "--file", help="Path to the .paprikarecipes file."
+        "--debug", action="store_true", default=False, help="Enable debug logging"
     )
-    parser.add_argument("-i", "--input-dir",
-                        help="Input directory. This will export the latest file found.")
+    parser.add_argument("-f", "--file", help="Path to the .paprikarecipes file.")
+    parser.add_argument(
+        "-i",
+        "--input-dir",
+        help="Input directory. This will export the latest file found.",
+    )
     parser.add_argument("-o", "--output-dir", required=True, help="Output directory.")
-    parser.add_argument("-u", "--update", action="store_true", default=False,
-                   help="Overwrite/update existing markdown files")
-    parser.add_argument("-s", "--sync", action="store_true", default=False,
-                   help="Remove recipes in output directory that don't exist in source")
+    parser.add_argument(
+        "-u",
+        "--update",
+        action="store_true",
+        default=False,
+        help="Overwrite/update existing markdown files",
+    )
+    parser.add_argument(
+        "-s",
+        "--sync",
+        action="store_true",
+        default=False,
+        help="Remove recipes in output directory that don't exist in source",
+    )
     args = parser.parse_args()
 
     # logging
@@ -277,16 +299,22 @@ if __name__ == "__main__":
         # Find the latest file in the directory that matches the regex:
         # Export YYYY-MM-DD.*All Recipes.paprikarecipes.zip
         # Make .zip optional, as on *Nix systems, this is not present
-        regex = re.compile(r"Export \d{4}-\d{2}-\d{2}.*All Recipes\.paprikarecipes(\.zip)?$")
+        regex = re.compile(
+            r"Export \d{4}-\d{2}-\d{2}.*All Recipes\.paprikarecipes(\.zip)?$"
+        )
         latest_file = None
         for file_name in os.listdir(args.input_dir):
             if regex.match(file_name):
                 file_path = os.path.join(args.input_dir, file_name)
-                if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(latest_file):
+                if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(
+                    latest_file
+                ):
                     latest_file = file_path
 
         if not latest_file:
-            logging.error("No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip")
+            logging.error(
+                "No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip"
+            )
             exit(1)
         logging.info(f"Found latest file: {latest_file}")
         args.file = latest_file
