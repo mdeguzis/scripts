@@ -92,6 +92,7 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Handle ingredients that may not have sections
     ingredients = recipe_data.get("ingredients", "")
+    ingredients = f"- {ingredients}"
     # First split on double newlines to get sections
     sections = ingredients.split("\n\n")
     formatted_sections = []
