@@ -170,7 +170,7 @@ def convert_json_to_markdown(json_file, output_dir):
     # This is first-come-first serve processing to place recipes until I
     # have a better solution
     sub_folder_name = None
-    if len(categories) == 1:
+    if len(recipe_data.get("categories", "")) == 1:
         sub_folder_name = categories.lower()
     else:
         if "soup" in categories.lower():
