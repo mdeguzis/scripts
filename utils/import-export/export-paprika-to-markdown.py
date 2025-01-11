@@ -95,15 +95,30 @@ def convert_json_to_markdown(json_file, output_dir):
     ingredients = f"- {ingredients}"
     # First split on double newlines to get sections
     sections = ingredients.split("\n\n")
-    formatted_sections = []
+    formatted_lines = []
     for section in sections:
         # Split each section on single newlines
         lines = section.split("\n")
-        # Add dash to lines after the first one in each section
-        formatted_lines = [lines[0]] + [f"- {line}" for line in lines[1:]]
-        formatted_sections.append("\n".join(formatted_lines))
+        if lines:
+            formatted_lines.append(lines[0])
+
+        for line in lines[1:]:
+            # Check for different line types
+            if line[0].isupper():
+                # Lines starting with capital letters (likely headers)
+                formatted_lines.append(f"\n{line}")
+            elif line.startswith(("*", "-", "•")):
+                # Lines that already have bullets/markers
+                formatted_lines.append(line)
+            elif line.strip().startswith("("):
+                # Optional ingredients or notes in parentheses
+                formatted_lines.append(line)
+            else:
+                # All other lines get a dash
+                formatted_lines.append(f"- {line}")
+
     # Join sections back with double newlines
-    ingredients = "\n\n".join(formatted_sections)
+    ingredients = "\n".join(formatted_lines)
 
     # Number instructions
     instructions = recipe_data.get("directions", "")
@@ -140,6 +155,8 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"Source: {source_url_formatted}<br>\n"
     markdown_content += f"Prep time: {prep_time}<br>\n"
     markdown_content += f"Cook time: {cook_time}<br>\n"
+    if difficulty:
+        markdown_content += f"Diffculty: {difficulty}<br>\n"
     markdown_content += f"Total time: {total_time}<br>\n"
     markdown_content += f"Servings: {servings}\n"
     markdown_content += "</div>\n\n"
@@ -149,10 +166,13 @@ def convert_json_to_markdown(json_file, output_dir):
 
     # Main content
     markdown_content += f"# {title}\n\n"
-    markdown_content += "## Ingredients\n"
+    markdown_content += "## Ingredients\n\n"
     markdown_content += f"{ingredients}\n\n"
     markdown_content += "## Instructions\n"
     markdown_content += f"{instructions}\n\n"
+    if nutritional_info:
+        markdown_content += "## Nutritional Info\n"
+        markdown_content += f"{nutritional_info}\n\n"
     if notes:
         markdown_content += "## Notes\n"
         markdown_content += f"{notes}\n\n"
@@ -196,7 +216,7 @@ def convert_json_to_markdown(json_file, output_dir):
     # Check if file exists and skip if overwrite is False
     if os.path.exists(output_file) and not args.update:
         logging.warning(
-            f"Skipping existing file: {output_file}. Use --update to force changes."
+            "Skipping existing file: %s. Use --update to force changes.", output_file
         )
         return
 
@@ -206,7 +226,7 @@ def convert_json_to_markdown(json_file, output_dir):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
-    logging.info(f"Converted to Markdown: {output_file}")
+    logging.info("Converted to Markdown: %s", output_file)
     return output_file
 
 
