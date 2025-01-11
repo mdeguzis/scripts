@@ -10,8 +10,6 @@ import shutil
 import zipfile
 from datetime import datetime
 
-zipfile
-
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/paprika-export.log"
 
@@ -33,14 +31,14 @@ def setup_logger(debug=False):
 def extract_paprika_file(paprika_file, extract_dir):
     """Extracts the main Paprika export zip file."""
     if not zipfile.is_zipfile(paprika_file):
-        logging.error(f"{paprika_file} is not a valid zip file.")
+        logging.error("%s is not a valid zip file.", paprika_file)
         return None
 
     os.makedirs(extract_dir, exist_ok=True)
     with zipfile.ZipFile(paprika_file, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
-    logging.info(f"Extracted Paprika recipes to: {extract_dir}")
+    logging.info("Extracted Paprika recipes to: %s", extract_dir)
     return extract_dir
 
 
@@ -156,8 +154,9 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"Prep time: {prep_time}<br>\n"
     markdown_content += f"Cook time: {cook_time}<br>\n"
     if difficulty:
-        markdown_content += f"Diffculty: {difficulty}<br>\n"
-    markdown_content += f"Total time: {total_time}<br>\n"
+        markdown_content += f"Difficulty: {difficulty}<br>\n"
+    if total_time:
+        markdown_content += f"Total time: {total_time}<br>\n"
     markdown_content += f"Servings: {servings}\n"
     markdown_content += "</div>\n\n"
 
@@ -186,7 +185,7 @@ def convert_json_to_markdown(json_file, output_dir):
     # These are usually from ingredient parsing
     markdown_content = re.sub(r"^\*\s*$", "", markdown_content, flags=re.MULTILINE)
 
-    # Make an output_dir sub_dir based on preset catetories I set
+    # Make an output_dir sub_dir based on preset categories I set
     # This is first-come-first serve processing to place recipes until I
     # have a better solution
     sub_folder_name = None
@@ -237,7 +236,7 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
     decompress_recipes(paprika_file, extract_dir)
 
     json_output_dir = os.path.join(extract_dir, "json")
-    logging.info(f"Converting recipes to Markdown in: {json_output_dir}")
+    logging.info("Converting recipes to Markdown in: %s", json_output_dir)
     processed = False
 
     # Keep track of processed files for sync
@@ -264,7 +263,7 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
                     full_path = os.path.join(root, file)
                     if full_path not in processed_files:
                         logging.info(
-                            f"Removing old recipe that do not exist in source: {full_path}"
+                            "Removing old recipe that do not exist in source: %s", full_path"
                         )
                         os.remove(full_path)
 
