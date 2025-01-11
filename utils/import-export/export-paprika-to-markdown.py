@@ -263,7 +263,8 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
                     full_path = os.path.join(root, file)
                     if full_path not in processed_files:
                         logging.info(
-                            "Removing old recipe that do not exist in source: %s", full_path"
+                            "Removing old recipe that do not exist in source: %s",
+                            full_path,
                         )
                         os.remove(full_path)
 
