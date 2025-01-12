@@ -255,7 +255,7 @@ def convert_json_to_markdown(json_file, output_dir):
         formatted_instructions = []
         for i, instruction in enumerate(instructions, 1):
             if instruction:
-                formatted_instructions.append(f"{i}. {instruction}")
+                formatted_instructions.append(instruction)
         instructions = "\n".join(formatted_instructions)
     else:
         instructions = instructions if instructions else ""
