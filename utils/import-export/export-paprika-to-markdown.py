@@ -244,6 +244,65 @@ def convert_json_to_markdown(json_file, output_dir):
     return output_file
 
 
+def sync_markdown_files(extract_dir, processed_files):
+    """
+    Sync markdown files by removing duplicates and old recipes.
+
+    Args:
+        extract_dir (str): Base directory containing markdown files
+        processed_files (set): Set of processed file paths
+
+    Returns:
+        int: Number of files removed during sync
+    """
+    logging.warning("Syncing: Removing duplicates and old recipes...")
+    removed_count = 0
+
+    # First find all markdown files
+    all_markdown_files = {}
+    for root, _, files in os.walk(extract_dir):
+        if "json" in root:
+            continue
+        for file in files:
+            if file.endswith(".md"):
+                full_path = os.path.join(root, file)
+                # Group by filename
+                if file not in all_markdown_files:
+                    all_markdown_files[file] = [full_path]
+                else:
+                    all_markdown_files[file].append(full_path)
+
+    # Now check each file
+    for filename, paths in all_markdown_files.items():
+        # Get the correct path from processed_files if it exists
+        correct_path = None
+        for processed_path in processed_files:
+            if os.path.basename(processed_path) == filename:
+                correct_path = processed_path
+                break
+
+        if correct_path:
+            # Remove any paths that don't match the correct one
+            for path in paths:
+                if path != correct_path:
+                    logging.info(
+                        "Removing duplicate recipe: %s (keeping %s)", path, correct_path
+                    )
+                    os.remove(path)
+                    removed_count += 1
+        else:
+            # File doesn't exist in source anymore, remove all instances
+            for path in paths:
+                logging.info(
+                    "Removing old recipe that no longer exists in source: %s", path
+                )
+                os.remove(path)
+                removed_count += 1
+
+    logging.info("Sync complete. Removed %d files.", removed_count)
+    return removed_count
+
+
 def process_paprika_to_markdown(paprika_file, extract_dir):
     """Main process to convert Paprika file to Markdown."""
 
@@ -269,27 +328,15 @@ def process_paprika_to_markdown(paprika_file, extract_dir):
         return
 
     if args.sync:
-        logging.warning("Syncing: Removing old recipes not found in source data...")
-        for root, _, files in os.walk(extract_dir):
-            if "json" in root:
-                continue
-            for file in files:
-                if file.endswith(".md"):
-                    full_path = os.path.join(root, file)
-                    if full_path not in processed_files:
-                        logging.info(
-                            "Removing old recipe that do not exist in source: %s",
-                            full_path,
-                        )
-                        os.remove(full_path)
+        sync_markdown_files(extract_dir, processed_files)
 
     # Write a success file with current date/time
     current_time = datetime.now().strftime("%Y-%m-%d:%H.%M.%S")
-    success_file = os.path.join(extract_dir, f"last-exported.txt")
+    success_file = os.path.join(extract_dir, "last-exported.txt")
     with open(success_file, "w", encoding="utf-8") as f:
         f.write(f"Export successful: {current_time}\n")
 
-    logging.info(f"All recipes converted to Markdown in: {extract_dir}")
+    logging.info("All recipes converted to Markdown in: %s", extract_dir)
 
 
 if __name__ == "__main__":
