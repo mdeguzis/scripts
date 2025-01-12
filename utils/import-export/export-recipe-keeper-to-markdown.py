@@ -216,10 +216,10 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
                             recipe_data["photo_data"] = img_data
 
             # Create sanitized filename
-            filename = re.sub(r"[^\w\s-]", "", name.lower())
-            filename = re.sub(r"[-\s]+", "-", filename)
-            json_filename = f"{filename}.json"
-            json_path = os.path.join(output_dir, json_filename)
+            output_filename = re.sub(r"[^\w\s-]", "", name.lower())
+            output_filename = re.sub(r"[-\s]+", "-", output_filename)
+            output_file = os.path.join(output_dir, f"{output_filename}.json")
+            json_path = os.path.join(output_dir, output_file)
 
             with open(json_path, "w", encoding="utf-8") as json_file:
                 json.dump(recipe_data, json_file, indent=2)
