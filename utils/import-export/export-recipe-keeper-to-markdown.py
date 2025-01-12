@@ -360,10 +360,37 @@ def convert_json_to_markdown(json_file, output_dir):
         nutrition_table = "".join(nutrition_table)
         markdown_content += f"{nutrition_table}\n\n"
 
+    # Make an output_dir sub_dir based on preset categories I set
+    # This is first-come-first serve processing to place recipes until I
+    # have a better solution
+    sub_folder_name = None
+    if len(recipe_data.get("categories", "")) == 1:
+        sub_folder_name = categories.lower()
+    else:
+        if "soup" in categories.lower():
+            sub_folder_name = "soup"
+        elif "chicken" in categories.lower():
+            sub_folder_name = "chicken"
+        elif "bread" in categories.lower():
+            sub_folder_name = "bread"
+        elif "beef" in categories.lower():
+            sub_folder_name = "beef"
+        elif "pork" in categories.lower():
+            sub_folder_name = "pork"
+        elif "fish" in categories.lower():
+            sub_folder_name = "fish"
+        else:
+            sub_folder_name = "uncategorized"
+
+    if sub_folder_name:
+        output_dir = os.path.join(output_dir, sub_folder_name)
+        os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f"{title}.md")
+
     # Create the output filename
-    output_filename = re.sub(r"[^\w\s-]", "", title.lower())
-    output_filename = re.sub(r"[-\s]+", "-", output_filename)
-    output_file = os.path.join(output_dir, f"{output_filename}.md")
+    # output_filename = re.sub(r"[^\w\s-]", "", title.lower())
+    # output_filename = re.sub(r"[-\s]+", "-", output_filename)
+    # output_file = os.path.join(output_dir, f"{output_filename}.md")
 
     # Write the markdown file
     with open(output_file, "w", encoding="utf-8") as f:
