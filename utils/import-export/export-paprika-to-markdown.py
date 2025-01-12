@@ -45,19 +45,19 @@ def extract_paprika_file(paprika_file, extract_dir):
 def decompress_recipes(paprika_file, extract_dir):
     """Decompresses all `.paprikarecipe` (gzip) files in the directory."""
 
-    logging.debug(f"Decompressing Paprika file {paprika_file}")
+    logging.debug("Decompressing Paprika file %s", paprika_file)
 
     output_dir = os.path.join(extract_dir, "json")
     os.makedirs(output_dir, exist_ok=True)
 
     # First, extract all files from the zip archive
-    logging.info(f"Extracting recipes from {paprika_file}")
+    logging.info("Extracting recipes from %s", paprika_file)
     with zipfile.ZipFile(paprika_file, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
     for file_name in os.listdir(extract_dir):
         if file_name.endswith(".paprikarecipe"):
-            logging.debug(f"Decompressing recipe: {file_name}")
+            logging.debug("Decompressing recipe: %s", file_name)
             file_path = os.path.join(extract_dir, file_name)
             with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
                 json_data = gz_file.read()
@@ -76,7 +76,7 @@ def decompress_recipes(paprika_file, extract_dir):
 
             # Remove the original .paprikarecipe file
             os.remove(file_path)
-            logging.debug(f"Decompressed: {file_name} to {json_file_path}")
+            logging.debug("Decompressed: %s to %s", file_name, json_file_path)
 
 
 def convert_json_to_markdown(json_file, output_dir):
@@ -169,14 +169,23 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"{ingredients}\n\n"
     markdown_content += "## Instructions\n"
     markdown_content += f"{instructions}\n\n"
+
+    # Create table for nutritional info
     if nutritional_info:
         markdown_content += "## Nutritional Info\n"
         # Simple markdown table
         nutrition_table = []
-        nutrition_table.append("|   |   |")
-        nutrition_table.append("|---|---|")
-        for n in nutritional_info.splitlines():
-            nutrition_table.append(f"|{n[0]}|n{[1]}|")
+        nutrition_table.append("| **[label]** | **[value]** | **[percent]** |\n")
+        nutrition_table.append("|---|---|--|\n")
+        pattern = r"(.*?)\s*(\d+[a-zA-Z]+)\s*(\d+%)"
+        for n in nutritional_info.split("\n"):
+            matches = re.match(pattern, n)
+            if matches:
+                label = matches.group(1).strip()
+                amount = matches.group(2).strip()
+                percent = matches.group(3).strip()
+                nutrition_table.append(f"|{label}|{amount}|{percent}\n")
+        nutrition_table = "".join(nutrition_table)
         markdown_content += f"{nutrition_table}\n\n"
     if notes:
         markdown_content += "## Notes\n"
