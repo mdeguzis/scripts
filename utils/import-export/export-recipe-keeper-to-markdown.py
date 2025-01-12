@@ -527,9 +527,7 @@ if __name__ == "__main__":
     os.makedirs(args.output_dir, exist_ok=True)
 
     if args.input_dir:
-        # Find the latest file in the directory that matches the regex:
-        # Export YYYY-MM-DD.*All Recipes.recipekeeperrecipes.zip
-        # Make .zip optional, as on *Nix systems, this is not present
+        # Find the latest file in the directory that matches:
         regex = re.compile(r"RecipeKeeper_\d{8}_\d{6}\.zip$")
         latest_file = None
         for file_name in os.listdir(args.input_dir):
@@ -542,10 +540,10 @@ if __name__ == "__main__":
 
         if not latest_file:
             logging.error(
-                "No matching files found in the directory. Export <DATE>All Recipes.recipekeeperrecipes.zip"
+                "No matching files found in the directory. Pattern: RecipeKeeper_<DATE>_<TIME>.zip"
             )
             exit(1)
-        logging.info(f"Found latest file: {latest_file}")
+        logging.info("Found latest file: %s", latest_file)
         args.file = latest_file
 
     if not os.path.exists(args.file):
