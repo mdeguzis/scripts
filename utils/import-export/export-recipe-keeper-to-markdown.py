@@ -385,12 +385,11 @@ def convert_json_to_markdown(json_file, output_dir):
     if sub_folder_name:
         output_dir = os.path.join(output_dir, sub_folder_name)
         os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, f"{title}.md")
 
-    # Create the output filename
-    # output_filename = re.sub(r"[^\w\s-]", "", title.lower())
-    # output_filename = re.sub(r"[-\s]+", "-", output_filename)
-    # output_file = os.path.join(output_dir, f"{output_filename}.md")
+    # Fix spaces/casing
+    output_filename = re.sub(r"[^\w\s-]", "", title.lower())
+    output_filename = re.sub(r"[-\s]+", "-", output_filename)
+    output_file = os.path.join(output_dir, f"{output_filename}.md")
 
     # Write the markdown file
     with open(output_file, "w", encoding="utf-8") as f:
