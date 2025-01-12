@@ -125,7 +125,7 @@ def convert_json_to_markdown(json_file, output_dir):
     notes = recipe_data.get("notes", "")
 
     # Other data
-    nutritional_info = recipe_data.get("nutritional_info", "").replace("\n", "  \n")
+    nutritional_info = recipe_data.get("nutritional_info", "")
     prep_time = recipe_data.get("prep_time", "")
     cook_time = recipe_data.get("cook_time", "")
     total_time = recipe_data.get("total_time", "")
@@ -171,7 +171,13 @@ def convert_json_to_markdown(json_file, output_dir):
     markdown_content += f"{instructions}\n\n"
     if nutritional_info:
         markdown_content += "## Nutritional Info\n"
-        markdown_content += f"{nutritional_info}\n\n"
+        # Simple markdown table
+        nutrition_table = []
+        nutrition_table.append("|   |   |")
+        nutrition_table.append("|---|---|")
+        for n in nutritional_info.splitlines():
+            nutrition_table.append(f"|{n[0]}|n{[1]}|")
+        markdown_content += f"{nutrition_table}\n\n"
     if notes:
         markdown_content += "## Notes\n"
         markdown_content += f"{notes}\n\n"
