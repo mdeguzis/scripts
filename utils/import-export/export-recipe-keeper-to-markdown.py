@@ -9,11 +9,47 @@ import re
 import shutil
 import zipfile
 from datetime import datetime
+from io import BytesIO
 
 from bs4 import BeautifulSoup
+from PIL import Image
 
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-keeper-export.log"
+
+
+def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
+    """
+    Resizes an image repeatedly until both dimensions are under the specified max size.
+    Then converts it to a Base64 string.
+
+    :param image_path: Path to the input image
+    :param max_size: Maximum width or height allowed
+    :param output_format: Output format for the image (default is JPEG)
+    :return: Base64 encoded string of the resized image
+    """
+    # Open the image
+    with Image.open(image_path) as img:
+        # Ensure the image is in RGB mode for formats like JPEG
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
+        # Resize repeatedly until both dimensions are under max_size
+        while img.width > max_size or img.height > max_size:
+            img = img.resize(
+                (img.width // 2, img.height // 2),
+                Image.Resampling.LANCZOS,  # Updated from ANTIALIAS
+            )
+
+        # Save the resized image to a buffer
+        buffer = BytesIO()
+        img.save(buffer, format=output_format, quality=85)  # Adjust quality as needed
+        buffer.seek(0)
+
+        # Encode the image to Base64
+        base64_string = base64.b64encode(buffer.read()).decode("utf-8")
+
+        return base64_string
 
 
 def setup_logger(debug=False):
@@ -113,10 +149,14 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
 
             # Extract times
             prep_time = recipe_div.find("meta", attrs={"itemprop": "prepTime"})
-            recipe_data["prep_time"] = prep_time["content"] if prep_time else ""
+            if prep_time:
+                prep_span = prep_time.parent.find("span")
+                recipe_data["prep_time"] = prep_span.text.strip() if prep_span else ""
 
             cook_time = recipe_div.find("meta", attrs={"itemprop": "cookTime"})
-            recipe_data["cook_time"] = cook_time["content"] if cook_time else ""
+            if cook_time:
+                cook_span = cook_time.parent.find("span")
+                recipe_data["cook_time"] = cook_span.text.strip() if cook_span else ""
 
             # Extract ingredients
             ingredients_div = recipe_div.find("div", class_="recipe-ingredients")
@@ -153,7 +193,8 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
                     img_path = os.path.join(extract_dir, img_src)
                     if os.path.exists(img_path):
                         with open(img_path, "rb") as img_file:
-                            img_data = base64.b64encode(img_file.read()).decode("utf-8")
+                            # img_data = base64.b64encode(img_file.read()).decode("utf-8")
+                            img_data = resize_until_threshold(img_file, max_size=600)
                             recipe_data["photo_data"] = img_data
 
             # Create sanitized filename
