@@ -125,7 +125,7 @@ def convert_json_to_markdown(json_file, output_dir):
     notes = recipe_data.get("notes", "")
 
     # Other data
-    nutritional_info = recipe_data.get("nutritional_info", "")
+    nutritional_info = recipe_data.get("nutritional_info", "").replace("\n", "  \n")
     prep_time = recipe_data.get("prep_time", "")
     cook_time = recipe_data.get("cook_time", "")
     total_time = recipe_data.get("total_time", "")
