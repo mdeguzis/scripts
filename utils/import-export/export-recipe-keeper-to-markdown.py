@@ -168,6 +168,25 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
                 ]
                 recipe_data["ingredients"] = ingredients
 
+            # extract nutritional info
+            nutrition_section = soup.find("h3", string="Nutrition")
+            if not nutrition_section:
+                return json.dumps({"error": "Nutrition section not found"})
+
+            # Extract nutritional info
+            nutrition_info = {}
+            nutrition_section = soup.find("h3", string="Nutrition")
+            div_tags = nutrition_section.find_next_siblings("div")
+
+            for tag in div_tags:
+                label = tag.get_text(strip=True)
+                meta = tag.find("meta", {"itemprop": True})
+                if meta and meta.get("content"):
+                    value = label.split(":")
+                    nutrition_info[value[0].strip()] = value[1].strip()
+            if nutrition_info:
+                recipe_data["nutrition_info"] = nutrition_info
+
             # Extract directions
             directions_div = recipe_div.find(
                 "div", attrs={"itemprop": "recipeDirections"}
@@ -233,7 +252,6 @@ def convert_json_to_markdown(json_file, output_dir):
     ingredients = recipe_data.get("ingredients", [])
     if isinstance(ingredients, list):
         formatted_ingredients = []
-        current_section = None
 
         for ingredient in ingredients:
             if ingredient:
@@ -329,6 +347,18 @@ def convert_json_to_markdown(json_file, output_dir):
 
     if notes:
         markdown_content += notes
+
+    nutrition_info = recipe_data.get("nutrition_info", [])
+    if nutrition_info:
+        markdown_content += "## Nutrition Information\n\n"
+        # Simple markdown table
+        nutrition_table = []
+        nutrition_table.append("| **[label]** | **[value]** |\n")
+        nutrition_table.append("|---|---\n")
+        for key, value in nutrition_info.items():
+            nutrition_table.append(f"|{key}|{value}\n")
+        nutrition_table = "".join(nutrition_table)
+        markdown_content += f"{nutrition_table}\n\n"
 
     # Create the output filename
     output_filename = re.sub(r"[^\w\s-]", "", title.lower())

@@ -180,7 +180,7 @@ def convert_json_to_markdown(json_file, output_dir):
         # Simple markdown table
         nutrition_table = []
         nutrition_table.append("| **[label]** | **[value]** | **[% daily value]** |\n")
-        nutrition_table.append("|---|---|--|\n")
+        nutrition_table.append("|---|---|---|\n")
         pattern = r"(.*?)\s*(\d+[a-zA-Z]+)\s*(\d+%)"
         for n in nutritional_info.split("\n"):
             matches = re.match(pattern, n)
