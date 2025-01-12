@@ -48,6 +48,10 @@ def decompress_recipes(paprika_file, extract_dir):
     logging.debug("Decompressing Paprika file %s", paprika_file)
 
     output_dir = os.path.join(extract_dir, "json")
+    # Clear out files in extract dir/json if sync is set
+    if args.sync:
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
     # First, extract all files from the zip archive
@@ -247,6 +251,7 @@ def convert_json_to_markdown(json_file, output_dir):
 def sync_markdown_files(extract_dir, processed_files):
     """
     Sync markdown files by removing duplicates and old recipes.
+    Also removes corresponding JSON files that are no longer needed.
 
     Args:
         extract_dir (str): Base directory containing markdown files
@@ -257,6 +262,7 @@ def sync_markdown_files(extract_dir, processed_files):
     """
     logging.warning("Syncing: Removing duplicates and old recipes...")
     removed_count = 0
+    json_dir = os.path.join(extract_dir, "json")
 
     # First find all markdown files
     all_markdown_files = {}
@@ -289,6 +295,16 @@ def sync_markdown_files(extract_dir, processed_files):
                         "Removing duplicate recipe: %s (keeping %s)", path, correct_path
                     )
                     os.remove(path)
+
+                    # Remove corresponding JSON file
+                    json_filename = (
+                        os.path.splitext(os.path.basename(path))[0] + ".json"
+                    )
+                    json_path = os.path.join(json_dir, json_filename)
+                    if os.path.exists(json_path):
+                        logging.info("Removing corresponding JSON file: %s", json_path)
+                        os.remove(json_path)
+
                     removed_count += 1
         else:
             # File doesn't exist in source anymore, remove all instances
@@ -297,6 +313,14 @@ def sync_markdown_files(extract_dir, processed_files):
                     "Removing old recipe that no longer exists in source: %s", path
                 )
                 os.remove(path)
+
+                # Remove corresponding JSON file
+                json_filename = os.path.splitext(os.path.basename(path))[0] + ".json"
+                json_path = os.path.join(json_dir, json_filename)
+                if os.path.exists(json_path):
+                    logging.info("Removing corresponding JSON file: %s", json_path)
+                    os.remove(json_path)
+
                 removed_count += 1
 
     logging.info("Sync complete. Removed %d files.", removed_count)
