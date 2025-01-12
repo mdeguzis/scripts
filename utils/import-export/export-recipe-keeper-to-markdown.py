@@ -83,7 +83,7 @@ def extract_recipe_keeper_file(recipe_keeper_file, extract_dir):
 def decompress_recipes(recipe_keeper_file, extract_dir):
     """Extracts recipes from HTML and images from the zip file."""
 
-    logging.debug("Extracting from recipekeeper file %s", recipe_keeper_file)
+    logging.debug("Extracting from RecipeKeeper file %s", recipe_keeper_file)
 
     output_dir = os.path.join(extract_dir, "json")
     # Clear out files in extract dir/json if sync is set
@@ -109,7 +109,6 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
     # Find all recipe divs
     recipe_divs = soup.find_all("div", class_="recipe-details")
     processed_files = set()
-
     for recipe_div in recipe_divs:
         try:
             recipe_data = {}
@@ -237,6 +236,7 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
     shutil.rmtree(os.path.join(extract_dir, "images"), ignore_errors=True)
 
     logging.info("Finished processing recipes")
+    logging.info("Processed %s recipes", len(processed_files))
     return processed_files
 
 
