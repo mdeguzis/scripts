@@ -363,6 +363,8 @@ def convert_json_to_markdown(json_file, output_dir):
     # Make an output_dir sub_dir based on preset categories I set
     # This is first-come-first serve processing to place recipes until I
     # have a better solution
+    
+    # Make the first main folder the course
     sub_folder_name = None
     if len(recipe_data.get("categories", "")) == 1:
         sub_folder_name = categories.lower()
@@ -381,9 +383,15 @@ def convert_json_to_markdown(json_file, output_dir):
             sub_folder_name = "fish"
         else:
             sub_folder_name = "uncategorized"
-
-    if sub_folder_name:
-        output_dir = os.path.join(output_dir, sub_folder_name)
+    
+    # Ensure the path is relative by removing any leading slash
+    course = recipe_data.get("course", "no-course").replace(" ", "-").lower().lstrip('/')
+    # Set to blank
+    if not course:
+        course = "no-course"
+    output_dir = os.path.join(output_dir, course, sub_folder_name)
+    if not os.path.exists(output_dir):
+        print(f"Creating output_dir: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
 
     # Fix spaces/casing
