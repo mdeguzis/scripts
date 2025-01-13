@@ -273,7 +273,11 @@ def convert_json_to_markdown(json_file, output_dir):
         formatted_instructions = []
         for i, instruction in enumerate(instructions, 1):
             if instruction:
-                formatted_instructions.append(instruction)
+                # if instruction doesn't start with a number, add "1."
+                if not instruction[0].isdigit():
+                    formatted_instructions.append(f"1. {instruction}")
+                else:
+                    formatted_instructions.append(instruction)
         instructions = "\n".join(formatted_instructions)
     else:
         instructions = instructions if instructions else ""
@@ -281,7 +285,7 @@ def convert_json_to_markdown(json_file, output_dir):
     # Get notes
     notes = recipe_data.get("notes", "")
     if notes:
-        notes = f"\n## Notes\n{notes}\n"
+        notes = f"\n## Notes\n{notes}\n\n"
 
     # Get course and category
     course = recipe_data.get("course", "")
