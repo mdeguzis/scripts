@@ -9,6 +9,7 @@ import sys
 import tempfile
 
 import markdown
+from markdown_it import MarkdownIt
 from PyQt5.QtCore import QDir, Qt
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -86,6 +87,9 @@ class ManifestTreeView(QTreeView):
         self.setColumnWidth(0, column_width)
 
 
+from markdown_it import MarkdownIt
+
+
 class MarkdownViewer(QMainWindow):
     def __init__(self, manifest):
         super().__init__()
@@ -94,6 +98,22 @@ class MarkdownViewer(QMainWindow):
 
         # WebEngine View for rendering HTML content
         self.browser = QWebEngineView(self)
+
+        # CSS to style tables
+        self.table_css = """
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        """
 
         # Create a splitter to separate the tree view and markdown preview
         self.splitter = QSplitter(Qt.Horizontal)
@@ -130,14 +150,25 @@ class MarkdownViewer(QMainWindow):
             with open(file_path, "r", encoding="utf-8") as f:
                 markdown_content = f.read()
 
-            # Convert Markdown to HTML
-            html_content = markdown.markdown(markdown_content)
+            # Use markdown-it-py to convert Markdown to HTML
+            md = MarkdownIt()
+            html_content = md.render(markdown_content)
+
+            # Add custom CSS to the HTML content for proper table rendering
+            html_content = self.apply_custom_css(html_content)
 
             # Handle base64 images in Markdown
             html_content = self.handle_base64_images(html_content, file_path)
 
             # Render HTML in the browser widget
             self.browser.setHtml(html_content)
+
+    def apply_custom_css(self, html_content):
+        """
+        Apply custom CSS to the HTML content for proper table rendering.
+        """
+        style_tag = f"<style>{self.table_css}</style>"
+        return style_tag + html_content
 
     def handle_base64_images(self, html_content, file_path):
         """
