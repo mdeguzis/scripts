@@ -383,9 +383,9 @@ def convert_json_to_markdown(json_file, output_dir):
         # Simple markdown table
         nutrition_table = []
         nutrition_table.append("| **[label]** | **[value]** |\n")
-        nutrition_table.append("|---|---\n")
+        nutrition_table.append("|---|---|\n")
         for key, value in nutrition_info.items():
-            nutrition_table.append(f"|{key}|{value}\n")
+            nutrition_table.append(f"|{key}|{value}|\n")
         nutrition_table = "".join(nutrition_table)
         markdown_content += f"{nutrition_table}\n\n"
 
