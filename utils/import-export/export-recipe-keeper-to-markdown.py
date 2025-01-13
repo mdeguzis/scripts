@@ -18,6 +18,31 @@ home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-keeper-export.log"
 
 
+def generate_manifest(root_path):
+    manifest = {}
+    for root, dirs, files in os.walk(root_path):
+        # Get the relative path from the root directory
+        relative_path = os.path.relpath(root, root_path)
+        # Normalize "." as the root
+        if relative_path == ".":
+            relative_path = ""
+
+        # Build the nested dictionary structure
+        current = manifest
+        if relative_path:
+            for part in relative_path.split(os.sep):
+                current = current.setdefault(part, {})
+
+        # Add files to the current level
+        for file in files:
+            if "files" not in current:
+                current["files"] = []
+            full_path = os.path.join(root, file)
+            current["files"].append(full_path)
+
+    return manifest
+
+
 def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
     """
     Resizes an image repeatedly until both dimensions are under the specified max size.
@@ -367,7 +392,7 @@ def convert_json_to_markdown(json_file, output_dir):
     # Make an output_dir sub_dir based on preset categories I set
     # This is first-come-first serve processing to place recipes until I
     # have a better solution
-    
+
     # Make the first main folder the course
     sub_folder_name = None
     if len(recipe_data.get("categories", "")) == 1:
@@ -387,9 +412,11 @@ def convert_json_to_markdown(json_file, output_dir):
             sub_folder_name = "fish"
         else:
             sub_folder_name = "uncategorized"
-    
+
     # Ensure the path is relative by removing any leading slash
-    course = recipe_data.get("course", "no-course").replace(" ", "-").lower().lstrip('/')
+    course = (
+        recipe_data.get("course", "no-course").replace(" ", "-").lower().lstrip("/")
+    )
     # Set to blank
     if not course:
         course = "no-course"
@@ -489,7 +516,7 @@ def sync_markdown_files(extract_dir, processed_files):
 
 
 def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir):
-    """Main process to convert recipekeeper file to Markdown."""
+    """Main process to convert RecipeKeeper file to Markdown."""
 
     logging.info("Converting recipes to Markdown")
     decompress_recipes(recipe_keeper_file, extract_dir)
@@ -506,7 +533,13 @@ def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir):
             output_file = convert_json_to_markdown(json_file, extract_dir)
             if output_file:
                 processed_files.add(output_file)
+                if not args.save_json:
+                    os.remove(json_file)
             processed = True
+
+    if not args.save_json:
+        if os.path.exists(json_output_dir):
+            shutil.rmtree(json_output_dir)
 
     if not processed:
         logging.error("No recipes found to convert.")
@@ -514,6 +547,14 @@ def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir):
 
     if args.sync:
         sync_markdown_files(extract_dir, processed_files)
+
+    # Write the entire tree structure to a manifest.json
+    # This will help to feed to a GUI in the future
+    manifest_file = os.path.join(extract_dir, "manifest.json")
+    manifest = generate_manifest(extract_dir)
+    with open(manifest_file, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    logging.info("Manifest file written to: %s", manifest_file)
 
     # Write a success file with current date/time
     current_time = datetime.now().strftime("%Y-%m-%d:%H.%M.%S")
@@ -545,6 +586,11 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Overwrite/update existing markdown files",
+    )
+    parser.add_argument(
+        "--save-json",
+        action="store_true",
+        help="Retain the JSON exports in the output directory",
     )
     parser.add_argument(
         "-s",
