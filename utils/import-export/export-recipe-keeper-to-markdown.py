@@ -391,7 +391,6 @@ def convert_json_to_markdown(json_file, output_dir):
         course = "no-course"
     output_dir = os.path.join(output_dir, course, sub_folder_name)
     if not os.path.exists(output_dir):
-        print(f"Creating output_dir: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
 
     # Fix spaces/casing
