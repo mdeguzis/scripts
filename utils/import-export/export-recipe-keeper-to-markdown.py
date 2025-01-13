@@ -112,7 +112,7 @@ def extract_recipe_keeper_file(recipe_keeper_file, extract_dir):
     return extract_dir
 
 
-def decompress_recipes(recipe_keeper_file, extract_dir, sync):
+def decompress_recipes(recipe_keeper_file, extract_dir):
     """Extracts recipes from HTML and images from the zip file."""
 
     logging.debug("Extracting from RecipeKeeper file %s", recipe_keeper_file)
