@@ -19,6 +19,13 @@ log_file = f"{home_dir}/recipe-keeper-export.log"
 
 
 def generate_manifest(root_path):
+    """
+    Generate a manifest of the directory structure and files.
+
+    :param root_path: Path to the root directory
+    :return: A nested dictionary representing the directory structure and files
+    """
+
     manifest = {}
     for root, dirs, files in os.walk(root_path):
         # Get the relative path from the root directory
@@ -101,11 +108,11 @@ def extract_recipe_keeper_file(recipe_keeper_file, extract_dir):
     with zipfile.ZipFile(recipe_keeper_file, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
-    logging.info("Extracted recipekeeper recipes to: %s", extract_dir)
+    logging.info("Extracted RecipeKeeper recipes to: %s", extract_dir)
     return extract_dir
 
 
-def decompress_recipes(recipe_keeper_file, extract_dir):
+def decompress_recipes(recipe_keeper_file, extract_dir, sync):
     """Extracts recipes from HTML and images from the zip file."""
 
     logging.debug("Extracting from RecipeKeeper file %s", recipe_keeper_file)
@@ -613,9 +620,9 @@ if __name__ == "__main__":
         # Find the latest file in the directory that matches:
         regex = re.compile(r"RecipeKeeper_\d{8}_\d{6}\.zip$")
         latest_file = None
-        for file_name in os.listdir(args.input_dir):
-            if regex.match(file_name):
-                file_path = os.path.join(args.input_dir, file_name)
+        for input_file in os.listdir(args.input_dir):
+            if regex.match(input_file):
+                file_path = os.path.join(args.input_dir, input_file)
                 if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(
                     latest_file
                 ):
@@ -630,10 +637,10 @@ if __name__ == "__main__":
         args.file = latest_file
 
     if not os.path.exists(args.file):
-        logging.info(f"Error: File {args.file} does not exist.")
+        logging.info("Error: File %s does not exist.", args.file)
     else:
         process_recipe_keeper_to_markdown(args.file, args.output_dir)
 
     # Copy log to output dir
     shutil.copy(log_file, args.output_dir)
-    logging.info(f"Done. Log: {log_file}")
+    logging.info("Done. Log: %s", log_file)

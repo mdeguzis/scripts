@@ -410,9 +410,9 @@ if __name__ == "__main__":
             r"Export \d{4}-\d{2}-\d{2}.*All Recipes\.paprikarecipes(\.zip)?$"
         )
         latest_file = None
-        for file_name in os.listdir(args.input_dir):
-            if regex.match(file_name):
-                file_path = os.path.join(args.input_dir, file_name)
+        for input_file in os.listdir(args.input_dir):
+            if regex.match(input_file):
+                file_path = os.path.join(args.input_dir, input_file)
                 if not latest_file or os.path.getmtime(file_path) > os.path.getmtime(
                     latest_file
                 ):
@@ -423,14 +423,14 @@ if __name__ == "__main__":
                 "No matching files found in the directory. Export <DATE>All Recipes.paprikarecipes.zip"
             )
             exit(1)
-        logging.info(f"Found latest file: {latest_file}")
+        logging.info("Found latest file: %s", latest_file)
         args.file = latest_file
 
     if not os.path.exists(args.file):
-        logging.info(f"Error: File {args.file} does not exist.")
+        logging.info("Error: File %s does not exist.", args.file)
     else:
         process_paprika_to_markdown(args.file, args.output_dir)
 
     # Copy log to output dir
     shutil.copy(log_file, args.output_dir)
-    logging.info(f"Done. Log: {log_file}")
+    logging.info("Done. Log: %s", log_file)
