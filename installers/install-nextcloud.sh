@@ -52,13 +52,19 @@ if [[ "$TYPE" == "server" ]]; then
     # Pull the Nextcloud All-in-One Image
     # Use Non-Privileged Ports
     echo "Pulling/running the Nextcloud All-in-One Docker image..."
-    podman run \
-        --detach \
-        --name nextcloud-server \
-        --volume ~/nextcloud-server:/var/www/html \
+    if ! podman run \
+	--detach \
         --replace \
-        -p 8080:80 \
-        nextcloud
+        --name nextcloud-server \
+	-v nextcloud:/var/www/html \
+	-v apps:/var/www/html/custom_apps \
+	-v config:/var/www/html/config \
+	-v data:/var/www/html/data \
+        -p 8088:80 \
+        nextcloud; then
+    	echo "[ERROR] Failed to run Nextcloud server!"
+	exit 1
+   fi
 
 else
     echo "Client type is not implemented yet."
