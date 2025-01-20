@@ -1,118 +1,66 @@
-#!/bin/bash
+# /bin/bash
 
-# Function to display error messages and exit
-function error_exit {
-    echo "[INFO] Error: $1" >&2
-    exit 1
-}
+# Script to install Paprika using Wine with a dedicated prefix
 
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Add architecture for Wine"
-echo -e "-------------------------------------------------------\n"
+set -e
 
-# TODO - add other OS package manager types here...
-sudo dpkg --add-architecture i386 || error_exit "Failed to add i386 architecture"
-echo "[INFO] i386 architecture added successfully."
+APP_NAME="Paprika"
+WINE_PREFIX="$HOME/.wine-paprika"
+WINE_VERSION="stable"  # Change to "staging" or "devel" if needed
+INSTALLER_URL="https://www.paprikaapp.com/downloads/windows/latest/PaprikaSetup.msi"
+INSTALLER_PATH="$HOME/Downloads/Paprika3-Setup.exe"
 
-sudo apt update || error_exit "Failed to update package list"
-echo "[INFO] Package list updated successfully."
+echo "Installing $APP_NAME with a dedicated Wine prefix at $WINE_PREFIX."
 
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Install Wine"
-echo -e "-------------------------------------------------------\n"
-sudo apt install --install-recommends wine-stable -y || error_exit "Failed to install Wine"
-echo "[INFO] Wine installed successfully."
-
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Download and prepare Winetricks"
-echo -e "-------------------------------------------------------\n"
-read -erp "Press ENTER"
-wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks || error_exit "Failed to download Winetricks"
-chmod +x winetricks || error_exit "Failed to make Winetricks executable"
-echo "[INFO] Winetricks downloaded and prepared successfully."
-
-echo -e "\n-------------------------------------------------------"
-echo -e "[INFO] Run winecfg to set Windows version to Windows 10"
-echo -e "-------------------------------------------------------\n"
-read -erp "Press ENTER"
-winecfg || error_exit "Failed to configure Wine"
-echo "[INFO] Wine configured successfully. Please ensure Windows version is set to Windows 10."
-
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Install dependencies using Winetricks"
-echo -e "-------------------------------------------------------\n"
-
-echo -e "\n------------------------"
-echo -e "winetricks: allfonts"
-echo -e "------------------------\n"
-read -erp "Press ENTER"
-./winetricks allfonts || error_exit "Failed to install allfonts"
-echo "[INFO] Allfonts installed successfully."
-
-echo -e "\n------------------------"
-echo -e "winetricks: dotnet472"
-echo -e "------------------------\n"
-read -erp "Press ENTER"
-#./winetricks dotnet472 || error_exit "Failed to install .NET 4.7.2"
-./winetricks dotnet472
-echo "[INFO] .NET 4.7.2 installed successfully."
-
-echo -e "\n------------------------"
-echo -e "winetricks: fontsmooth-rgb"
-echo -e "------------------------\n"
-read -erp "Press ENTER"
-./winetricks fontsmooth-rgb || error_exit "Failed to enable fontsmooth-rgb"
-echo "[INFO] Fontsmoothing enabled successfully."
-
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Install Paprika"
-echo -e "-------------------------------------------------------\n"
-read -erp "Press ENTER"
-if [ ! -f ~/PaprikaSetup.msi ]; then
-    error_exit "PaprikaSetup.msi not found in home directory. Please download it before running this script."
+# Step 1: Ensure dependencies are installed
+echo "Checking dependencies..."
+if ! command -v wine &>/dev/null; then
+    echo "Wine is not installed. Installing Wine..."
+    sudo apt update && sudo apt install -y wine wine64 winetricks
+fi
+if ! command -v winetricks &>/dev/null; then
+    echo "Winetricks is not installed. Installing Winetricks..."
+    sudo apt update && sudo apt install -y winetricks
 fi
 
-wine msiexec /i ~/PaprikaSetup.msi || error_exit "Failed to install Paprika"
-echo -e "\n[INFO] Paprika installed successfully."
-read -erp "Press ENTER"
+# Step 2: Create a dedicated Wine prefix
+echo "Creating dedicated Wine prefix at $WINE_PREFIX..."
+WINEARCH="win32"  # Ensure 32-bit prefix for compatibility
+export WINEPREFIX="$WINE_PREFIX"
 
-echo -e "\n-------------------------------------------------------"
-echo -e "[INFO] = Configure Wine to resolve Redshift conflict"
-echo -e "-------------------------------------------------------\n"
-read -erp "Press ENTER"
-wine regedit || error_exit "Failed to open Wine registry editor"
-echo "[INFO] Please navigate to HKEY_CURRENT_USER\\Software\\Wine\\X11 Driver, create the key if it doesn't exist, and set UseXVidMode to N."
-echo "[INFO] Redshift conflict workaround applied."
-read -erp "Press ENTER"
+if [ ! -d "$WINE_PREFIX" ]; then
+    wineboot --init
+fi
 
-# Clean up
-echo -e "\n-------------------------------------------------------"
-echo "[INFO] Finishing up"
-echo -e "-------------------------------------------------------\n"
-read -erp "Press ENTER"
-rm -f ./winetricks || error_exit "Failed to remove Winetricks script"
-echo "[INFO] Winetricks script removed successfully."
-read -erp "Press ENTER"
+# Step 3: Install necessary Wine components
+echo "Installing required Wine components..."
+winetricks -q dotnet48 corefonts
 
-# Create a desktop entry for Paprika
-DESKTOP_FILE="$HOME/.local/share/applications/paprika.desktop"
-mkdir -p $(dirname "$DESKTOP_FILE") || error_exit "Failed to create applications directory"
-cat > "$DESKTOP_FILE" << EOL
-[Desktop Entry]
-Name=Paprika Recipe Manager
-Exec=wine "c:\\Program Files\\Paprika Recipe Manager 3\\Paprika.exe"
-Type=Application
-StartupNotify=true
-Path=$HOME
-Icon=applications-wine
-EOL
-
-if [ -f "$DESKTOP_FILE" ]; then
-    echo "[INFO] Desktop entry created successfully at $DESKTOP_FILE"
+# Step 4: Download the installer
+if [ ! -f "$INSTALLER_PATH" ]; then
+    echo "Downloading Paprika installer..."
+    wget -O "$INSTALLER_PATH" "$INSTALLER_URL"
 else
-    error_exit "Failed to create desktop entry"
+    echo "Paprika installer already downloaded at $INSTALLER_PATH."
 fi
 
-echo "[INFO] Installation completed! You can run Paprika with:"
-echo "[INFO] wine \"c:\\Program Files\\Paprika Recipe Manager 3\\Paprika.exe\""
+# Step 5: Run the installer
+echo "Running Paprika installer: ${INSTALLER}"
+wine msiexec /i "$INSTALLER_PATH"
+
+# Step 6: Create a desktop shortcut
+DESKTOP_ENTRY="$HOME/.local/share/applications/$APP_NAME.desktop"
+echo "Creating desktop shortcut at $DESKTOP_ENTRY..."
+cat <<EOF >"$DESKTOP_ENTRY"
+[Desktop Entry]
+Name=Paprika
+Exec=env WINEPREFIX=${HOME}/.wine-paprika wine start /unix "${HOME}/.wine-paprika/drive_c/Program Files/Paprika Recipe Manager 3/Paprika.exe"
+Type=Application
+Categories=Utility;
+EOF
+
+chmod +x "$DESKTOP_ENTRY"
+
+# Step 7: Finish up
+echo "Installation complete! You can launch $APP_NAME from your application menu."
 
