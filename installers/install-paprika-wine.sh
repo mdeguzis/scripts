@@ -14,13 +14,14 @@ echo "Installing $APP_NAME with a dedicated Wine prefix at $WINE_PREFIX."
 
 # Step 1: Ensure dependencies are installed
 echo "Checking dependencies..."
+sudo apt update
 if ! command -v wine &>/dev/null; then
     echo "Wine is not installed. Installing Wine..."
-    sudo apt update && sudo apt install -y wine wine64 winetricks
+    sudo apt install -y wine wine64 winetricks
 fi
 if ! command -v winetricks &>/dev/null; then
     echo "Winetricks is not installed. Installing Winetricks..."
-    sudo apt update && sudo apt install -y winetricks
+    sudo apt install -y winetricks
 fi
 
 # Step 2: Create a dedicated Wine prefix
