@@ -1,4 +1,4 @@
-# /bin/bash
+#!/bin/bash
 
 # Script to install Paprika using Wine with a dedicated prefix
 
@@ -6,7 +6,7 @@ set -e
 
 APP_NAME="Paprika"
 WINE_PREFIX="$HOME/.wine-paprika"
-WINE_VERSION="stable"  # Change to "staging" or "devel" if needed
+WINE_VERSION="stable"
 INSTALLER_URL="https://www.paprikaapp.com/downloads/windows/latest/PaprikaSetup.msi"
 INSTALLER_PATH="$HOME/Downloads/Paprika3-Setup.exe"
 
@@ -26,7 +26,8 @@ fi
 
 # Step 2: Create a dedicated Wine prefix
 echo "Creating dedicated Wine prefix at $WINE_PREFIX..."
-WINEARCH="win32"  # Ensure 32-bit prefix for compatibility
+# Ensure 32-bit prefix for compatibility
+WINEARCH="win32"
 export WINEPREFIX="$WINE_PREFIX"
 
 if [ ! -d "$WINE_PREFIX" ]; then
