@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 from io import BytesIO
+from typing import Any, Dict, Optional
 
 import isodate
 import requests
@@ -15,6 +16,62 @@ from PIL import Image
 
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-sage-export.log"
+
+def initialize_logger(
+    log_level: int = logging.INFO,
+    log_filename: Optional[str] = None,
+    propagate: bool = False,
+    scope: Optional[str] = None,
+    debug_more: bool = False,
+    formatter: str = "%(asctime)s - %(levelname)s - %(message)s",
+) -> logging.Logger:
+    """Initialize logger for both stdout and file output.
+
+    Args:
+        log_level: Logging level (default: logging.INFO)
+        log_filename: Output file name (default: None)
+        propagate: Whether to propagate to root logger (default: False)
+        scope: Logger scope name (default: None)
+        debug_more: Enable extra debug logging (default: False)
+        formatter: Log message format (default: "%(asctime)s - %(levelname)s - %(message)s")
+
+    Returns:
+        Configured logger instance
+    """
+    if (
+        formatter == "%(asctime)s - %(levelname)s - %(message)s"
+        and log_level == logging.DEBUG
+    ):
+        formatter = "[%(name)s] %(asctime)s - %(levelname)s - %(message)s"
+
+    if log_level == logging.DEBUG:
+        formatter = f"[%(name)s] {formatter}"
+
+    if not debug_more:
+        for module in ["botocore", "urllib3"]:
+            logging.getLogger(module).setLevel(logging.WARNING)
+
+    logger = logging.getLogger(scope)
+    logger.setLevel(log_level)
+    logger.propagate = propagate
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    console_formatter = logging.Formatter(formatter)
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    if log_filename:
+        if len(log_filename) < 4 or not log_filename.endswith(".log"):
+            log_filename += ".log"
+
+        file_handler = logging.FileHandler(log_filename, "w", encoding=None, delay=True)
+        file_handler.setLevel(log_level)
+        file_formatter = logging.Formatter(formatter)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+    return logger
 
 
 def generate_manifest(root_path):
@@ -82,88 +139,220 @@ def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
 
         return base64_string
 
+#!/usr/bin/env python3
+
+import getpass
+import json
+import logging
+import time
+from typing import Any, Dict, Optional
+from urllib.parse import urljoin
+
+import requests
+
+
+class RecipeSageAPI:
+    """RecipeSage API client."""
+    
+    def __init__(self):
+        self.base_url = "https://api.beta.recipesage.com"
+        self.session = requests.Session()
+        self.token: Optional[str] = None
+        
+        # Set default headers
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Origin': 'https://recipesage.com',
+            'Referer': 'https://recipesage.com/'
+        })
+
+    def login(self, email: str, password: str) -> bool:
+        """
+        Authenticate with RecipeSage.
+        
+        Args:
+            email: User's email
+            password: User's password
+            
+        Returns:
+            bool: True if login successful, False otherwise
+        """
+        login_url = urljoin(self.base_url, "/trpc/auth.login")
+        
+        try:
+            # Construct login payload
+            payload = {
+                "json": {
+                    "email": email,
+                    "password": password
+                }
+            }
+            
+            logger.debug(f"Attempting login for {email}")
+            response = self.session.post(login_url, json=payload)
+            
+            # Check response
+            if response.status_code == 200:
+                data = response.json()
+                # Extract token from response
+                if 'result' in data:
+                    self.token = data['result'].get('token')
+                    if self.token:
+                        logger.info("Login successful")
+                        # Update session headers with token
+                        self.session.headers.update({
+                            'Authorization': f'Bearer {self.token}'
+                        })
+                        return True
+            
+            logger.error(f"Login failed: {response.status_code} - {response.text}")
+            return False
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Login request failed: {e}")
+            return False
+
+    def start_export_job(self) -> Optional[str]:
+        """
+        Start a new export job.
+        
+        Returns:
+            str: Job ID if successful, None otherwise
+        """
+        if not self.token:
+            logger.error("Not authenticated. Please login first.")
+            return None
+            
+        export_url = urljoin(self.base_url, "/trpc/jobs.startExportJob")
+        
+        try:
+            payload = {
+                "json": {
+                    "format": "jsonld"
+                }
+            }
+            
+            response = self.session.post(export_url, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                job_id = data.get('result', {}).get('jobId')
+                if job_id:
+                    logger.info(f"Export job started: {job_id}")
+                    return job_id
+                    
+            logger.error(f"Failed to start export job: {response.status_code} - {response.text}")
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Export job request failed: {e}")
+            return None
+
+    def get_jobs(self) -> Optional[Dict[str, Any]]:
+        """
+        Get list of export jobs.
+        
+        Returns:
+            dict: Jobs data if successful, None otherwise
+        """
+        if not self.token:
+            logger.error("Not authenticated. Please login first.")
+            return None
+            
+        jobs_url = urljoin(self.base_url, "/trpc/jobs.getJobs")
+        
+        try:
+            response = self.session.get(jobs_url)
+            
+            if response.status_code == 200:
+                return response.json()
+                
+            logger.error(f"Failed to get jobs: {response.status_code} - {response.text}")
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Get jobs request failed: {e}")
+            return None
+
+    def wait_for_export(self, job_id: str, timeout: int = 300, interval: int = 5) -> Optional[Dict[str, Any]]:
+        """
+        Wait for export job to complete.
+        
+        Args:
+            job_id: Export job ID to wait for
+            timeout: Maximum time to wait in seconds
+            interval: Time between checks in seconds
+            
+        Returns:
+            dict: Export data if successful, None otherwise
+        """
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            jobs = self.get_jobs()
+            if not jobs:
+                return None
+                
+            # Find our job
+            for job in jobs.get('result', []):
+                if job.get('jobId') == job_id:
+                    status = job.get('status')
+                    if status == 'completed':
+                        logger.info("Export completed successfully")
+                        return job.get('result')
+                    elif status == 'failed':
+                        logger.error("Export job failed")
+                        return None
+                        
+            logger.debug(f"Export in progress, waiting {interval} seconds...")
+            time.sleep(interval)
+            
+        logger.error(f"Export timed out after {timeout} seconds")
+        return None
+
+
 def fetch_export_file():
     """
     Export recipes from RecipeSage by authenticating, starting an export job,
     and retrieving the list of jobs.
     """
 
-    try:
-        logging.info("Attempting to download your RecipeSage export file")
-        # Load credentials from environment variables
-        user = os.getenv("SAGE_USER")
-        password = os.getenv("SAGE_PASSWORD")
-        
-        if not user or not password:
-            raise ValueError("SAGE_USER and SAGE_PASSWORD must be set in environment variables.")
+    json_data = {}
 
-        # Set proper headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
+    try:
+        logger.info("Attempting to download your RecipeSage export file")
+
+        api = RecipeSageAPI()
+        # Get credentials (in practice, use environment variables or secure input)
+        email = os.environ.get("SAGE_USER")
+        if not email:
+            email = input("Enter your RecipeSage email: ")
+        password = os.environ.get("SAGE_PASSWORD")
+        if not password:
+            password = getpass.getpass("Enter your RecipeSage password: ")
+
+        if not api.login(email, password):
+            raise Exception("Failed to authenticate")
         
-        # Authenticate to get an authorization token
-        logging.debug("Attempting to get authorization token")
-        auth_url = "https://recipesage.com/auth/login"
-        auth_payload = {
-            "username": user,
-            "password": password
-        }
+        # Start export
+        job_id = api.start_export_job()
+        if not job_id:
+            raise Exception("Failed to start export")
         
-        auth_response = requests.post(
-            auth_url,
-            json=auth_payload,
-            headers=headers,
-        )
-        if auth_response.status_code != 200:
-            raise RuntimeError(f"Authentication failed: {auth_response.status_code} - {auth_response.text}")
-        logging.debug("Retrieved authorization token successfully")
-        
-        auth_data = auth_response.json()
-        token = auth_data.get("token")
-        
-        if not token:
-            raise RuntimeError("Authentication token not found in response.")
-        
-        # Start the export job
-        export_url = "https://api.beta.recipesage.com/trpc/jobs.startExportJob"
-        export_headers = {"Authorization": f"Bearer {token}"}
-        export_payload = {"json": {"format": "jsonld"}}
-        
-        export_response = requests.post(export_url, json=export_payload, headers=export_headers)
-        if export_response.status_code != 200:
-            raise RuntimeError(f"Failed to start export job: {export_response.status_code} - {export_response.text}")
-        
-        logging.info("Export job started successfully.")
-        
-        # Retrieve the list of export jobs
-        jobs_url = "https://api.beta.recipesage.com/trpc/jobs.getJobs"
-        jobs_response = requests.get(jobs_url, headers=export_headers)
-        
-        if jobs_response.status_code != 200:
-            raise RuntimeError(f"Failed to fetch export jobs: {jobs_response.status_code} - {jobs_response.text}")
-        
-        jobs_data = jobs_response.json()
+        # Wait for export to complete
+        result = api.wait_for_export(job_id)
+        if result:
+            json_data = result.json()
+        else:
+            raise Exception("Export failed")
+        json_data = result.json()
 
     except RuntimeError as e:
         raise RuntimeError("Failed to fetch export jobs: %s", e)
 
-    return jobs_data    
-
-def setup_logger(debug=False):
-    """
-    Configure logging with optional	debug level.
-    # Log file should store	to user	home dir, as /tmp is not always	accessible on all devices
-    """
-    level = logging.DEBUG if debug else logging.INFO
-
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s	- %(levelname)s	- %(message)s",
-        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    )
+    return json_data    
 
 
 def download_and_base64(image_url):
@@ -175,14 +364,14 @@ def download_and_base64(image_url):
     """
 
     try:
-        logging.debug("Attempting to download %s", image_url)
+        logger.debug("Attempting to download %s", image_url)
         # Send a GET request to download the image
         response = requests.get(image_url, stream=True)
         response.raise_for_status()  # Raise an HTTPError for bad responses (4xx, 5xx)
 
         # Encode the image content to Base64
         image_base64 = base64.b64encode(response.content).decode("utf-8")
-        logging.debug("Successfully downloaded and encoded %s", image_url)
+        logger.debug("Successfully downloaded and encoded %s", image_url)
         return f"data:image/jpeg;base64,{image_base64}"
     except Exception as e:
         return f"Error downloading or encoding the image: {e}"
@@ -354,7 +543,7 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
 
         with open(output_file, "w", encoding="utf-8") as md_file:
             md_file.write(markdown)
-        print(f"Exported: {output_file}")
+        logger.info(f"Exported: {output_file}")
 
 
 def sync_markdown_files(extract_dir, processed_files):
@@ -400,7 +589,7 @@ def sync_markdown_files(extract_dir, processed_files):
             # Remove any paths that	don't match	the	correct	one
             for path in paths:
                 if path != correct_path:
-                    logging.info(
+                    logger.info(
                         "Removing duplicate	recipe:	%s (keeping	%s)", path, correct_path
                     )
                     os.remove(path)
@@ -411,14 +600,14 @@ def sync_markdown_files(extract_dir, processed_files):
                     )
                     json_path = os.path.join(json_dir, json_filename)
                     if os.path.exists(json_path):
-                        logging.info("Removing corresponding JSON file:	%s", json_path)
+                        logger.info("Removing corresponding JSON file:	%s", json_path)
                         os.remove(json_path)
 
                     removed_count += 1
         else:
             # File doesn't exist in	source anymore,	remove all instances
             for path in paths:
-                logging.info(
+                logger.info(
                     "Removing old recipe that no longer	exists in source: %s", path
                 )
                 os.remove(path)
@@ -427,12 +616,12 @@ def sync_markdown_files(extract_dir, processed_files):
                 json_filename = os.path.splitext(os.path.basename(path))[0] + ".json"
                 json_path = os.path.join(json_dir, json_filename)
                 if os.path.exists(json_path):
-                    logging.info("Removing corresponding JSON file:	%s", json_path)
+                    logger.info("Removing corresponding JSON file:	%s", json_path)
                     os.remove(json_path)
 
                 removed_count += 1
 
-    logging.info("Sync complete. Removed %d	files.", removed_count)
+    logger.info("Sync complete. Removed %d	files.", removed_count)
     return removed_count
 
 
@@ -472,13 +661,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # logging
-    setup_logger(args.debug)
+    if args.debug:
+        logger = initialize_logger(log_level=logger.debug)
+    else:
+        logger = initialize_logger()
 
     if args.auto_import:
         fetch_export_file()
     else:
         if not args.file and not args.input_dir:
-            logging.info("Please provide either	a file or an input directory.")
+            logger.info("Please provide either	a file or an input directory.")
             exit(1)
         os.makedirs(args.output_dir, exist_ok=True)
 
@@ -499,20 +691,23 @@ if __name__ == "__main__":
                 "No	matching files found in	the	directory. Pattern:	recipesage-data-<ID>.json-ld.json"
             )
             exit(1)
-        logging.info("Found	latest file: %s", latest_file)
+        logger.info("Found	latest file: %s", latest_file)
         args.file = latest_file
 
     if not os.path.exists(args.file):
-        logging.info("Error: File %s does not exist.", args.file)
+        logger.info("Error: File %s does not exist.", args.file)
     else:
         export_recipes_to_markdown(args.file, args.output_dir, args.sync)
 
     # Save a copy of the JSON file in the output directory
-    logging.info("Saving a copy of the JSON file in the output directory")
-    shutil.copy(args.file, args.output_dir)
+    logger.info("Saving a copy of the input JSON file in the output directory")
+    data_dir = os.path.join(args.output_dir, "data")
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    shutil.copy(args.file, data_dir)
 
     # Copy log to output dir
-    shutil.copy(log_file, args.output_dir)
-    logging.info("Done.	Log: %s", log_file)
+    shutil.copy(log_file, data_dir)
+    logger.info("Done.	Log: %s", log_file)
 
-    logging.info("See output directory: %s", args.output_dir)
+    logger.info("See output directory: %s", args.output_dir)
