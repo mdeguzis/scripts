@@ -9,7 +9,7 @@ SCRIPT_DIR="$(
 )"
 
 # Base packages
-echo -e "\n[INFO] Installing base packages"
+echo -e "\n[INFO] Installing base packages\n"
 pkg install \
 	busybox \
 	clang \
@@ -33,7 +33,7 @@ pkg install \
 echo -e "\n[INFO] Running upgrade"
 pkg upgrade
 
-echo -e "\n[INFO] Installing Python packages"
+echo -e "\n[INFO] Installing Python packages\n"
 pip install \
 	bs4 \
 	isodate \
@@ -41,7 +41,7 @@ pip install \
 	requests
 
 # https://wiki.termux.com/wiki/Termux-services
-echo -e "\n[INFO] Activating services"
+echo -e "\n[INFO] Activating services\n"
 services=()
 services+=("crond")
 services+=("sshd")
@@ -59,8 +59,9 @@ done
 
 echo -e "\n[INFO] Fetching scripts"
 if [[ ! -d "${HOME}/scripts" ]]; then
-	cd "${HOME}"
-	git clone https://github.com/mdeguzis/scripts
+	git clone https://github.com/mdeguzis/scripts "${HOME}/scripts"
+else
+	git -C "${HOME}/scripts" pull --rebase
 fi
 
 cd "${SCRIPT_DIR}"
