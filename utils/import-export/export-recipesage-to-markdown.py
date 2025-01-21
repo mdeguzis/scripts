@@ -96,14 +96,30 @@ def fetch_export_file():
         
         if not user or not password:
             raise ValueError("SAGE_USER and SAGE_PASSWORD must be set in environment variables.")
+
+        # Set proper headers
+        headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
         
         # Authenticate to get an authorization token
-        auth_url = "https://api.beta.recipesage.com/trpc/auth.login"
-        auth_payload = {"username": user, "password": password}
+        logging.debug("Attempting to get authorization token")
+        auth_url = "https://recipesage.com/auth/login"
+        auth_payload = {
+            "username": user,
+            "password": password
+        }
         
-        auth_response = requests.post(auth_url, json=auth_payload)
+        auth_response = requests.post(
+            auth_url,
+            json=auth_payload,
+            headers=headers,
+        )
         if auth_response.status_code != 200:
             raise RuntimeError(f"Authentication failed: {auth_response.status_code} - {auth_response.text}")
+        logging.debug("Retrieved authorization token successfully")
         
         auth_data = auth_response.json()
         token = auth_data.get("token")

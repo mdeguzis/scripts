@@ -117,7 +117,7 @@ def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
 
     logging.debug("Extracting from RecipeKeeper file %s", recipe_keeper_file)
 
-    output_dir = os.path.join(extract_dir, "json")
+    output_dir = os.path.join(extract_dir, "data-files")
     # Clear out files in extract dir/json if sync is set
     if sync:
         if os.path.exists(output_dir):
@@ -141,6 +141,8 @@ def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
     # Find all recipe divs
     recipe_divs = soup.find_all("div", class_="recipe-details")
     processed_files = set()
+    processed_count = 0
+    all_recipe_json = {}
     for recipe_div in recipe_divs:
         try:
             recipe_data = {}
@@ -248,21 +250,25 @@ def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
                             img_data = resize_until_threshold(img_file, max_size=600)
                             recipe_data["photo_data"] = img_data
 
-            # Create sanitized filename
-            output_filename = re.sub(r"[^\w\s-]", "", name.lower())
-            output_filename = re.sub(r"[-\s]+", "-", output_filename)
-            output_file = os.path.join(output_dir, f"{output_filename}.json")
-            json_path = os.path.join(output_dir, output_file)
-
-            with open(json_path, "w", encoding="utf-8") as json_file:
-                json.dump(recipe_data, json_file, indent=2)
-
-            processed_files.add(json_path)
-            logging.debug("Created JSON file: %s", json_path)
+            processed_count += 1
+            all_recipe_json[recipe_data["id"]] = recipe_data
 
         except Exception as e:
             logging.error("Error processing recipe: %s", str(e))
             continue
+
+    # Save combined JSON to file
+    logging.info("Processed %s recipes", processed_count)
+    json_filename = "recipekeeper-all-recipes.json"
+    output_file = os.path.join(output_dir, json_filename)
+    logging.debug("Saving JSON to file: %s", output_file)
+    json_path = os.path.join(output_dir, output_file)
+
+    with open(json_path, "w", encoding="utf-8") as json_file:
+        json.dump(all_recipe_json, json_file, indent=2)
+
+    processed_files.add(json_path)
+    logging.debug("Created JSON file: %s", json_path)
 
     # Clean up the extracted files
     os.remove(html_file)
@@ -270,14 +276,11 @@ def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
 
     logging.info("Finished processing recipes")
     logging.info("Processed %s recipes", len(processed_files))
-    return processed_files
+    return all_recipe_json
 
 
-def convert_json_to_markdown(json_file, output_dir):
-    """Converts a single JSON recipe file to Markdown format."""
-
-    with open(json_file, "r", encoding="utf-8") as f:
-        recipe_data = json.load(f)
+def convert_json_to_markdown(recipe_data, output_dir):
+    """Converts a single JSON recipe to Markdown format."""
 
     title = recipe_data.get("name", "Untitled Recipe")
 
@@ -526,32 +529,30 @@ def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir, sync=Fals
     """Main process to convert RecipeKeeper file to Markdown."""
 
     logging.info("Converting recipes to Markdown")
-    decompress_recipes(recipe_keeper_file, extract_dir, sync)
-
-    json_output_dir = os.path.join(extract_dir, "json")
-    logging.info("Converting recipes to Markdown in: %s", json_output_dir)
     processed = False
+    processed_files = set()
+    recipes_json = decompress_recipes(recipe_keeper_file, extract_dir, sync)
+    if not recipes_json:
+        raise Exception("No recipes found in the file.")
 
     # Keep track of processed files for sync
-    processed_files = set()
-    for file_name in os.listdir(json_output_dir):
-        if file_name.endswith(".json"):
-            json_file = os.path.join(json_output_dir, file_name)
-            output_file = convert_json_to_markdown(json_file, extract_dir)
-            if output_file:
-                processed_files.add(output_file)
-            processed = True
+    # Process json one by one
+    for recipe_id, recipe_data in recipes_json.items():
+        # Convert to markdown
+        output_file = convert_json_to_markdown(recipe_data, extract_dir)
+        if output_file:
+            processed_files.add(output_file)
+        processed = True
 
     if not processed:
-        logging.error("No recipes found to convert.")
-        return
+        raise Exception("No recipes found to convert.")
 
     if args.sync:
         sync_markdown_files(extract_dir, processed_files)
 
     # Write the entire tree structure to a manifest.json
     # This will help to feed to a GUI in the future
-    manifest_file = os.path.join(extract_dir, "manifest.json")
+    manifest_file = os.path.join(extract_dir, "data-files", "manifest.json")
     manifest = generate_manifest(extract_dir)
     with open(manifest_file, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
@@ -559,7 +560,7 @@ def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir, sync=Fals
 
     # Write a success file with current date/time
     current_time = datetime.now().strftime("%Y-%m-%d:%H.%M.%S")
-    success_file = os.path.join(extract_dir, "last-exported.txt")
+    success_file = os.path.join(extract_dir, "data-files", "last-exported.txt")
     with open(success_file, "w", encoding="utf-8") as f:
         f.write(f"Export successful: {current_time}\n")
 
@@ -631,5 +632,5 @@ if __name__ == "__main__":
         process_recipe_keeper_to_markdown(args.file, args.output_dir, args.sync)
 
     # Copy log to output dir
-    shutil.copy(log_file, args.output_dir)
+    shutil.copy(log_file, f"{args.output_dir}/data-files")
     logging.info("Done. Log: %s", log_file)
