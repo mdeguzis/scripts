@@ -82,6 +82,72 @@ def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
 
         return base64_string
 
+def fetch_export_file():
+    """
+    Export recipes from RecipeSage by authenticating, starting an export job,
+    and retrieving the list of jobs.
+    """
+
+    try:
+        logging.info("Attempting to download your RecipeSage export file")
+        # Load credentials from environment variables
+        user = os.getenv("SAGE_USER")
+        password = os.getenv("SAGE_PASSWORD")
+        
+        if not user or not password:
+            raise ValueError("SAGE_USER and SAGE_PASSWORD must be set in environment variables.")
+        
+        # Authenticate to get an authorization token
+        auth_url = "https://api.beta.recipesage.com/trpc/auth.login"
+        auth_payload = {"username": user, "password": password}
+        
+        auth_response = requests.post(auth_url, json=auth_payload)
+        if auth_response.status_code != 200:
+            raise RuntimeError(f"Authentication failed: {auth_response.status_code} - {auth_response.text}")
+        
+        auth_data = auth_response.json()
+        token = auth_data.get("token")
+        
+        if not token:
+            raise RuntimeError("Authentication token not found in response.")
+        
+        # Start the export job
+        export_url = "https://api.beta.recipesage.com/trpc/jobs.startExportJob"
+        export_headers = {"Authorization": f"Bearer {token}"}
+        export_payload = {"json": {"format": "jsonld"}}
+        
+        export_response = requests.post(export_url, json=export_payload, headers=export_headers)
+        if export_response.status_code != 200:
+            raise RuntimeError(f"Failed to start export job: {export_response.status_code} - {export_response.text}")
+        
+        logging.info("Export job started successfully.")
+        
+        # Retrieve the list of export jobs
+        jobs_url = "https://api.beta.recipesage.com/trpc/jobs.getJobs"
+        jobs_response = requests.get(jobs_url, headers=export_headers)
+        
+        if jobs_response.status_code != 200:
+            raise RuntimeError(f"Failed to fetch export jobs: {jobs_response.status_code} - {jobs_response.text}")
+        
+        jobs_data = jobs_response.json()
+
+    except RuntimeError as e:
+        raise RuntimeError("Failed to fetch export jobs: %s", e)
+    
+
+    logging.info("Export jobs fetched successfully:")
+    print(jobs_data)
+    print('pause')
+    import time
+    time.sleep(10000)
+
+# Example usage
+if __name__ == "__main__":
+    try:
+        export_recipes()
+    except Exception as e:
+        print(f"Error: {e}")
+
 
 def setup_logger(debug=False):
     """
@@ -104,13 +170,16 @@ def download_and_base64(image_url):
     :param image_url: URL of the image to download.
     :return: Base64 string of the image or an error message.
     """
+
     try:
+        logging.debug("Attempting to download %s", image_url)
         # Send a GET request to download the image
         response = requests.get(image_url, stream=True)
         response.raise_for_status()  # Raise an HTTPError for bad responses (4xx, 5xx)
 
         # Encode the image content to Base64
         image_base64 = base64.b64encode(response.content).decode("utf-8")
+        logging.debug("Successfully downloaded and encoded %s", image_url)
         return f"data:image/jpeg;base64,{image_base64}"
     except Exception as e:
         return f"Error downloading or encoding the image: {e}"
@@ -372,6 +441,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug", action="store_true", default=False, help="Enable	debug logging"
     )
+    parser.add_argument("-a", "--auto-import", action='store_true', help=
+                        "Automatically fetch export file from RecipeSage. Requires "
+                        "SAGE_USER and SAGE_PASSWORD be set in the environment"
+                        )
     parser.add_argument("-f", "--file", help="Path to the .recipekeeperrecipes file.")
     parser.add_argument(
         "-i",
@@ -398,10 +471,13 @@ if __name__ == "__main__":
     # logging
     setup_logger(args.debug)
 
-    if not args.file and not args.input_dir:
-        logging.info("Please provide either	a file or an input directory.")
-        exit(1)
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.auto_import:
+        fetch_export_file()
+    else:
+        if not args.file and not args.input_dir:
+            logging.info("Please provide either	a file or an input directory.")
+            exit(1)
+        os.makedirs(args.output_dir, exist_ok=True)
 
     if args.input_dir:
         # Find the latest file in the directory	that matches:
