@@ -243,6 +243,7 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
             .replace(" ", "-")
             .replace("/", "-")
             .replace("'", "")
+            .replace("|", "")
             .lower()
         )
         # Convert all to lowercase
@@ -255,7 +256,6 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
         # This is first-come-first serve processing to place recipes until I
         # have a better solution
         sub_folder_name = None
-        title = recipe.get("name", "Untitled Recipe")
         categories = ",".join(recipe.get("recipeCategory", "None"))
         if len(categories) == 1:
             sub_folder_name = categories.lower()
@@ -278,7 +278,7 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
         # Create the subfolder path
         file_output_dir = os.path.join(output_dir, sub_folder_name)
         os.makedirs(file_output_dir, exist_ok=True)
-        output_file = os.path.join(file_output_dir, f"{title}.md")
+        output_file = os.path.join(file_output_dir, f"{filename}.md")
 
         with open(output_file, "w", encoding="utf-8") as md_file:
             md_file.write(markdown)
