@@ -718,7 +718,7 @@ if __name__ == "__main__":
 
     # Copy log to output dir
     shutil.copy(log_file, data_dir)
-    logger.info("Done.	Log: %s", log_file)
 
+    logger.info("Done.	Log: %s", log_file)
     logger.info("See output directory: %s", args.output_dir)
         
