@@ -662,7 +662,7 @@ if __name__ == "__main__":
 
     # logging
     if args.debug:
-        logger = initialize_logger(log_level=logger.debug)
+        logger = initialize_logger(log_level=logging.DEBUG)
     else:
         logger = initialize_logger()
 
@@ -711,3 +711,4 @@ if __name__ == "__main__":
     logger.info("Done.	Log: %s", log_file)
 
     logger.info("See output directory: %s", args.output_dir)
+        
