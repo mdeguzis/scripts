@@ -112,14 +112,14 @@ def extract_recipe_keeper_file(recipe_keeper_file, extract_dir):
     return extract_dir
 
 
-def decompress_recipes(recipe_keeper_file, extract_dir):
+def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
     """Extracts recipes from HTML and images from the zip file."""
 
     logging.debug("Extracting from RecipeKeeper file %s", recipe_keeper_file)
 
     output_dir = os.path.join(extract_dir, "json")
     # Clear out files in extract dir/json if sync is set
-    if args.sync:
+    if sync:
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -154,6 +154,7 @@ def decompress_recipes(recipe_keeper_file, extract_dir):
             # Extract name
             name = recipe_div.find("h2", attrs={"itemprop": "name"}).text.strip()
             recipe_data["name"] = name
+            logging.info("Processing recipe name '%s'", name)
 
             # Extract course
             course_span = recipe_div.find("span", attrs={"itemprop": "recipeCourse"})
@@ -289,7 +290,6 @@ def convert_json_to_markdown(json_file, output_dir):
             if ingredient:
                 # Check if this is a section header (all caps or ends with :)
                 if ingredient.isupper() or ingredient.endswith(":"):
-                    current_section = ingredient
                     formatted_ingredients.append(f"\n### {ingredient}\n")
                 else:
                     # Regular ingredient - add bullet point
@@ -522,11 +522,11 @@ def sync_markdown_files(extract_dir, processed_files):
     return removed_count
 
 
-def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir):
+def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir, sync=False):
     """Main process to convert RecipeKeeper file to Markdown."""
 
     logging.info("Converting recipes to Markdown")
-    decompress_recipes(recipe_keeper_file, extract_dir)
+    decompress_recipes(recipe_keeper_file, extract_dir, sync)
 
     json_output_dir = os.path.join(extract_dir, "json")
     logging.info("Converting recipes to Markdown in: %s", json_output_dir)
@@ -540,13 +540,7 @@ def process_recipe_keeper_to_markdown(recipe_keeper_file, extract_dir):
             output_file = convert_json_to_markdown(json_file, extract_dir)
             if output_file:
                 processed_files.add(output_file)
-                if not args.save_json:
-                    os.remove(json_file)
             processed = True
-
-    if not args.save_json:
-        if os.path.exists(json_output_dir):
-            shutil.rmtree(json_output_dir)
 
     if not processed:
         logging.error("No recipes found to convert.")
@@ -595,11 +589,6 @@ if __name__ == "__main__":
         help="Overwrite/update existing markdown files",
     )
     parser.add_argument(
-        "--save-json",
-        action="store_true",
-        help="Retain the JSON exports in the output directory",
-    )
-    parser.add_argument(
         "-s",
         "--sync",
         action="store_true",
@@ -639,7 +628,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.file):
         logging.info("Error: File %s does not exist.", args.file)
     else:
-        process_recipe_keeper_to_markdown(args.file, args.output_dir)
+        process_recipe_keeper_to_markdown(args.file, args.output_dir, args.sync)
 
     # Copy log to output dir
     shutil.copy(log_file, args.output_dir)
