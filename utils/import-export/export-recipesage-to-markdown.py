@@ -313,13 +313,13 @@ class RecipeSageAPI:
         return None
 
 
-def fetch_export_file():
+def fetch_export_file(output_dir):
     """
     Export recipes from RecipeSage by authenticating, starting an export job,
     and retrieving the list of jobs.
     """
 
-    json_data = {}
+    filename = None
 
     try:
         logger.info("Attempting to download your RecipeSage export file")
@@ -347,12 +347,16 @@ def fetch_export_file():
             json_data = result.json()
         else:
             raise Exception("Export failed")
-        json_data = result.json()
+        
+        # Write JSON to file in output dir to scoop up
+        filename = f"recipesage-data-{int(time.time() * 1000)}.json-ld.json"
+        filepath = os.path.join(output_dir, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(json.dumps(json_data, indent=4))
+        return filename
 
     except RuntimeError as e:
         raise RuntimeError("Failed to fetch export jobs: %s", e)
-
-    return json_data    
 
 
 def download_and_base64(image_url):
@@ -490,6 +494,8 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
     Exports recipes from JSON data to Markdown files.
     """
 
+    processed_files = set()
+
     # Load JSON from file
     with open(json_file, "r", encoding="utf-8") as f:
         json_data = json.load(f)
@@ -543,8 +549,12 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
 
         with open(output_file, "w", encoding="utf-8") as md_file:
             md_file.write(markdown)
+
+        processed_files.add(output_file)
         logger.info(f"Exported: {output_file}")
 
+    if sync:
+        sync_markdown_files(output_dir, processed_files)
 
 def sync_markdown_files(extract_dir, processed_files):
     """
@@ -608,7 +618,7 @@ def sync_markdown_files(extract_dir, processed_files):
             # File doesn't exist in	source anymore,	remove all instances
             for path in paths:
                 logger.info(
-                    "Removing old recipe that no longer	exists in source: %s", path
+                    "Removing old recipe that no longer exists in source: %s", path
                 )
                 os.remove(path)
 
@@ -621,7 +631,7 @@ def sync_markdown_files(extract_dir, processed_files):
 
                 removed_count += 1
 
-    logger.info("Sync complete. Removed %d	files.", removed_count)
+    logger.info("Sync complete. Removed %d files.", removed_count)
     return removed_count
 
 
@@ -667,10 +677,10 @@ if __name__ == "__main__":
         logger = initialize_logger()
 
     if args.auto_import:
-        fetch_export_file()
+        args.file = fetch_export_file(args.output_dir)
     else:
         if not args.file and not args.input_dir:
-            logger.info("Please provide either	a file or an input directory.")
+            logger.info("Please provide eithera file or an input directory.")
             exit(1)
         os.makedirs(args.output_dir, exist_ok=True)
 
