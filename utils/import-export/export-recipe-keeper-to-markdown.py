@@ -258,7 +258,6 @@ def decompress_recipes(recipe_keeper_file, extract_dir, sync=False):
             continue
 
     # Save combined JSON to file
-    logging.info("Processed %s recipes", processed_count)
     json_filename = "recipekeeper-all-recipes.json"
     output_file = os.path.join(output_dir, json_filename)
     logging.debug("Saving JSON to file: %s", output_file)

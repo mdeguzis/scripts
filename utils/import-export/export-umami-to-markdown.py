@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shutil
+import zipfile
 from io import BytesIO
 
 import isodate
@@ -14,7 +15,7 @@ import requests
 from PIL import Image
 
 home_dir = os.path.expanduser("~")
-log_file = f"{home_dir}/recipe-sage-export.log"
+log_file = f"{home_dir}/umami-export.log"
 
 
 def generate_manifest(root_path):
@@ -82,75 +83,6 @@ def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
 
         return base64_string
 
-def fetch_export_file():
-    """
-    Export recipes from RecipeSage by authenticating, starting an export job,
-    and retrieving the list of jobs.
-    """
-
-    try:
-        logging.info("Attempting to download your RecipeSage export file")
-        # Load credentials from environment variables
-        user = os.getenv("SAGE_USER")
-        password = os.getenv("SAGE_PASSWORD")
-        
-        if not user or not password:
-            raise ValueError("SAGE_USER and SAGE_PASSWORD must be set in environment variables.")
-
-        # Set proper headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-        
-        # Authenticate to get an authorization token
-        logging.debug("Attempting to get authorization token")
-        auth_url = "https://recipesage.com/auth/login"
-        auth_payload = {
-            "username": user,
-            "password": password
-        }
-        
-        auth_response = requests.post(
-            auth_url,
-            json=auth_payload,
-            headers=headers,
-        )
-        if auth_response.status_code != 200:
-            raise RuntimeError(f"Authentication failed: {auth_response.status_code} - {auth_response.text}")
-        logging.debug("Retrieved authorization token successfully")
-        
-        auth_data = auth_response.json()
-        token = auth_data.get("token")
-        
-        if not token:
-            raise RuntimeError("Authentication token not found in response.")
-        
-        # Start the export job
-        export_url = "https://api.beta.recipesage.com/trpc/jobs.startExportJob"
-        export_headers = {"Authorization": f"Bearer {token}"}
-        export_payload = {"json": {"format": "jsonld"}}
-        
-        export_response = requests.post(export_url, json=export_payload, headers=export_headers)
-        if export_response.status_code != 200:
-            raise RuntimeError(f"Failed to start export job: {export_response.status_code} - {export_response.text}")
-        
-        logging.info("Export job started successfully.")
-        
-        # Retrieve the list of export jobs
-        jobs_url = "https://api.beta.recipesage.com/trpc/jobs.getJobs"
-        jobs_response = requests.get(jobs_url, headers=export_headers)
-        
-        if jobs_response.status_code != 200:
-            raise RuntimeError(f"Failed to fetch export jobs: {jobs_response.status_code} - {jobs_response.text}")
-        
-        jobs_data = jobs_response.json()
-
-    except RuntimeError as e:
-        raise RuntimeError("Failed to fetch export jobs: %s", e)
-
-    return jobs_data    
 
 def setup_logger(debug=False):
     """
@@ -180,11 +112,19 @@ def download_and_base64(image_url):
         response = requests.get(image_url, stream=True)
         response.raise_for_status()  # Raise an HTTPError for bad responses (4xx, 5xx)
 
-        # Encode the image content to Base64
-        image_base64 = base64.b64encode(response.content).decode("utf-8")
+        # Save image to a tmp file
+        temp_image_path = "temp_image.jpg"
+        with open(temp_image_path, "wb") as temp_image:
+            for chunk in response.iter_content(chunk_size=8192):
+                temp_image.write(chunk)
+        image_base64 = resize_until_threshold(temp_image_path)
+        os.remove(temp_image_path)
         logging.debug("Successfully downloaded and encoded %s", image_url)
         return f"data:image/jpeg;base64,{image_base64}"
     except Exception as e:
+        # if exists, remove
+        if os.path.exists(temp_image_path):
+            os.remove(temp_image_path)
         return f"Error downloading or encoding the image: {e}"
 
 
@@ -296,65 +236,83 @@ def recipe_to_markdown(recipe):
     return markdown
 
 
-def export_recipes_to_markdown(json_file, output_dir, sync):
+def export_recipes_to_markdown(zip_file, output_dir, sync):
     """
     Exports recipes from JSON data to Markdown files.
     """
 
-    # Load JSON from file
-    with open(json_file, "r", encoding="utf-8") as f:
-        json_data = json.load(f)
+    logging.info("Extracting recipes from %s", zip_file)
 
+    extract_dir = os.path.join(output_dir, "extracted-recipes")
+    logging.debug("Creating output directories")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    if not os.path.exists(extract_dir):
+        os.makedirs(extract_dir)
 
-    for recipe in json_data:
-        # Use recipe name or identifier	as the filename
-        filename = (
-            recipe.get("name", recipe.get("identifier", "recipe"))
-            .replace(" ", "-")
-            .replace("/", "-")
-            .replace("'", "")
-            .replace("|", "")
-            .lower()
-        )
-        # Convert all to lowercase
-        filepath = os.path.join(output_dir, f"{filename}.md")
+    with zipfile.ZipFile(zip_file, "r") as zip_ref:
+        zip_ref.extractall(extract_dir)
 
-        # Convert recipe to	Markdown and save
-        markdown = recipe_to_markdown(recipe)
+    for file_name in os.listdir(extract_dir):
+        logging.debug("Opening and analyzing JSON file: %s", file_name)
+        with open(os.path.join(extract_dir, file_name), "r", encoding="utf-8") as f:
+            # If filename is not a JSON file, skip
+            if not file_name.endswith(".json"):
+                continue
+            recipe = json.load(f)
+            filename = (
+                recipe.get("name", recipe.get("identifier", "recipe"))
+                .replace(" ", "-")
+                .replace("/", "-")
+                .replace("'", "")
+                .replace("|", "")
+                .lower()
+            )
 
-        # Make an output_dir sub_dir based on preset categories I set
-        # This is first-come-first serve processing to place recipes until I
-        # have a better solution
-        sub_folder_name = None
-        categories = ",".join(recipe.get("recipeCategory", "None"))
-        if len(categories) == 1:
-            sub_folder_name = categories.lower()
-        else:
-            if "soup" in categories.lower():
-                sub_folder_name = "soup"
-            elif "chicken" in categories.lower():
-                sub_folder_name = "chicken"
-            elif "bread" in categories.lower():
-                sub_folder_name = "bread"
-            elif "beef" in categories.lower():
-                sub_folder_name = "beef"
-            elif "pork" in categories.lower():
-                sub_folder_name = "pork"
-            elif "fish" in categories.lower():
-                sub_folder_name = "fish"
+            # Convert recipe to	Markdown and save
+            markdown = recipe_to_markdown(recipe)
+
+            # Make an output_dir sub_dir based on preset categories I set
+            # This is first-come-first serve processing to place recipes until I
+            # have a better solution
+            sub_folder_name = None
+            categories = recipe.get("keywords", "None")
+            if len(categories) == 1:
+                sub_folder_name = categories.lower()
             else:
-                sub_folder_name = "uncategorized"
+                if "soup" in categories.lower():
+                    sub_folder_name = "soup"
+                elif "chicken" in categories.lower():
+                    sub_folder_name = "chicken"
+                elif "bread" in categories.lower():
+                    sub_folder_name = "bread"
+                elif "beef" in categories.lower():
+                    sub_folder_name = "beef"
+                elif "pork" in categories.lower():
+                    sub_folder_name = "pork"
+                elif "fish" in categories.lower():
+                    sub_folder_name = "fish"
+                else:
+                    sub_folder_name = "uncategorized"
 
-        # Create the subfolder path
-        file_output_dir = os.path.join(output_dir, sub_folder_name)
-        os.makedirs(file_output_dir, exist_ok=True)
-        output_file = os.path.join(file_output_dir, f"{filename}.md")
+            # Set parent folder cuisine (e.g. Soup)
+            cuisine = (
+                recipe.get("recipeCuisine", "no-course").replace(" ", "-").lower().lstrip("/")
+            )
+            if not cuisine:
+                cuisine = "no-course"
+            export_dir = os.path.join(output_dir, cuisine, sub_folder_name)
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
 
-        with open(output_file, "w", encoding="utf-8") as md_file:
-            md_file.write(markdown)
-        print(f"Exported: {output_file}")
+            # Create the subfolder path(s)
+            file_output_dir = os.path.join(export_dir, sub_folder_name)
+            os.makedirs(file_output_dir, exist_ok=True)
+            output_file = os.path.join(file_output_dir, f"{filename}.md")
+
+            with open(output_file, "w", encoding="utf-8") as md_file:
+                md_file.write(markdown)
+            print(f"Exported: {output_file}")
 
 
 def sync_markdown_files(extract_dir, processed_files):
@@ -439,13 +397,13 @@ def sync_markdown_files(extract_dir, processed_files):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Convert RecipeSage	recipes	to Markdown."
+        description="Convert umami	recipes	to Markdown."
     )
     parser.add_argument(
         "--debug", action="store_true", default=False, help="Enable	debug logging"
     )
     parser.add_argument("-a", "--auto-import", action='store_true', help=
-                        "Automatically fetch export file from RecipeSage. Requires "
+                        "Automatically fetch export file from umami. Requires "
                         "SAGE_USER and SAGE_PASSWORD be set in the environment"
                         )
     parser.add_argument("-f", "--file", help="Path to the .recipekeeperrecipes file.")
@@ -484,7 +442,7 @@ if __name__ == "__main__":
 
     if args.input_dir:
         # Find the latest file in the directory	that matches:
-        regex = re.compile(r"recipesage-data-\d+\.json-ld\.json")
+        regex = re.compile(r"^(.+)'s Cookbook\.zip$")
         latest_file = None
         for input_file in os.listdir(args.input_dir):
             if regex.match(input_file):
@@ -496,7 +454,7 @@ if __name__ == "__main__":
 
         if not latest_file:
             logging.error(
-                "No	matching files found in	the	directory. Pattern:	recipesage-data-<ID>.json-ld.json"
+                "No	matching files found in	the	directory. Pattern:	<NAME>'s Cookbook.zip"
             )
             exit(1)
         logging.info("Found	latest file: %s", latest_file)
