@@ -417,7 +417,7 @@ if __name__ == "__main__":
 
         if not latest_file:
             logging.error(
-                "No	matching files found in	the	directory. Pattern:	ecipesage-data-<ID>.json-ld.json"
+                "No	matching files found in	the	directory. Pattern:	recipesage-data-<ID>.json-ld.json"
             )
             exit(1)
         logging.info("Found	latest file: %s", latest_file)
@@ -428,6 +428,12 @@ if __name__ == "__main__":
     else:
         export_recipes_to_markdown(args.file, args.output_dir, args.sync)
 
+    # Save a copy of the JSON file in the output directory
+    logging.info("Saving a copy of the JSON file in the output directory")
+    shutil.copy(args.file, args.output_dir)
+
     # Copy log to output dir
     shutil.copy(log_file, args.output_dir)
     logging.info("Done.	Log: %s", log_file)
+
+    logging.info("See output directory: %s", args.output_dir)
