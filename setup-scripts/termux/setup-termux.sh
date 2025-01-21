@@ -1,12 +1,15 @@
 #!/bin/bash
 # Installs common packages and services
-# Preferred: termux-backup, https:g
+# Preferred: termux-backup, termux-services
 # Provides a general agnostic setup
 
-SCRIPT_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPT_DIR="$(
+	cd -- "$(dirname "$0")" >/dev/null 2>&1
+	pwd -P
+)"
 
 # Base packages
-echo "[INFO] Installing base packages"
+echo -e "\n[INFO] Installing base packages"
 pkg install \
 	busybox \
 	clang \
@@ -30,15 +33,21 @@ pkg install \
 echo -e "\n[INFO] Running upgrade"
 pkg upgrade
 
+echo -e "\n[INFO] Installing Python packages"
+pip install \
+	bs4 \
+	isodate \
+	pillow \
+	requests
+
 # https://wiki.termux.com/wiki/Termux-services
 echo -e "\n[INFO] Activating services"
 services=()
 services+=("crond")
 services+=("sshd")
 
-for service in "${services[@]}";
-do
-	echo "[INFO] Checking for service ${service}"	
+for service in "${services[@]}"; do
+	echo "[INFO] Checking for service ${service}"
 	if [[ $(pidof "${service}") == "" ]]; then
 		echo "[INFO] Enabling and starting ${service}"
 		sv-enable "${service}"
@@ -68,5 +77,3 @@ echo -e "\n[INFO] Finishing up"
 
 echo -e "\n[INFO] Running backup..."
 termux-backup --force "${HOME}/storage/documents/backups/termux/termux-backup.tar.gz"
-
-

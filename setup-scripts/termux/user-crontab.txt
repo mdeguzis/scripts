@@ -1,3 +1,3 @@
 0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-paprika-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/paprika-export --update --sync
-
 0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-recipe-keeper-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/recipe-keeper-export --update --sync
+0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-recipesage-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/recipesage-export --update --sync
