@@ -76,8 +76,9 @@ for repo in "${repos[@]}"; do
 done
 
 cd "${SCRIPT_DIR}"
-echo -e "\n[INFO] Configuring crontab"
+echo -e "\n[INFO] Attempting to configure crontab"
 if crontab -T "${SCRIPT_DIR}/user-crontab.txt"; then
+	echo "[INFO] Installing crontab"
 	crontab "${SCRIPT_DIR}/user-crontab.txt"
 fi
 
