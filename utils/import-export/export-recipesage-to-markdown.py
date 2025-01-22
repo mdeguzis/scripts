@@ -310,7 +310,7 @@ def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
         return base64_string
 
 
-def fetch_export_file(output_dir):
+def fetch_export_file(data_dir):
     """
     Export recipes from RecipeSage by authenticating, starting an export job,
     and retrieving the list of jobs.
@@ -348,12 +348,12 @@ def fetch_export_file(output_dir):
 
         # Write JSON to file in output dir to scoop up
         filename = f"recipesage-data-{int(time.time() * 1000)}.json-ld.json"
-        filepath = os.path.join(output_dir, filename)
+        filepath = os.path.join(data_dir, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(json.dumps(json_data, indent=4))
 
         logger.info("Wrote downloaded JSON data export as: %s", filepath)
-        return filename
+        return filepath
 
     except RuntimeError as e:
         raise RuntimeError("Failed to fetch export jobs: %s", e)
@@ -710,21 +710,17 @@ if __name__ == "__main__":
     else:
         logger = initialize_logger()
 
-    # Create data dir
+    # Create dirs
     data_dir = os.path.join(args.output_dir, "data")
-    logger.debug("Creating data dir: %s", data_dir)
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
-
-    if args.auto_import:
-        args.file = fetch_export_file(args.output_dir)
-    else:
-        if not args.file and not args.input_dir:
-            logger.info("Please provide eithera file or an input directory.")
-            exit(1)
+    if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir, exist_ok=True)
 
-    if args.input_dir:
+    if args.auto_import:
+        args.file = fetch_export_file(data_dir)
+
+    elif args.input_dir:
         # Find the latest file in the directory	that matches:
         regex = re.compile(r"recipesage-data-\d+\.json-ld\.json")
         latest_file = None
