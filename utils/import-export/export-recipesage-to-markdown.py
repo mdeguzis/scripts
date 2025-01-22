@@ -16,10 +16,123 @@ from typing import Any, Dict, List, Optional, Union
 
 import isodate
 import requests
+from cryptography.fernet import Fernet
 from PIL import Image
 
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-sage-export.log"
+
+import base64
+import json
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+from cryptography.fernet import Fernet
+
+logger = logging.getLogger(__name__)
+
+
+class CredentialManager:
+    """Manage encrypted credentials using Fernet."""
+
+    def __init__(self, service_name: str):
+        """Initialize credential manager."""
+        self.service_name = service_name
+        self.cred_dir = Path.home() / ".config" / service_name.lower()
+        self.key_file = self.cred_dir / ".key"
+        self.cred_file = self.cred_dir / ".credentials"
+
+    def _ensure_dir(self) -> None:
+        """Ensure credential directory exists with proper permissions."""
+        self.cred_dir.mkdir(parents=True, exist_ok=True)
+        self.cred_dir.chmod(0o700)
+
+    def _get_or_create_key(self) -> bytes:
+        """Get existing key or create new one."""
+        try:
+            if self.key_file.exists():
+                key = self.key_file.read_bytes()
+            else:
+                self._ensure_dir()
+                key = Fernet.generate_key()
+                self.key_file.write_bytes(key)
+                self.key_file.chmod(0o600)
+            return key
+        except Exception as e:
+            logger.error("Error handling encryption key: %s", e)
+            raise
+
+    def store_credentials(self, username: str, password: str) -> bool:
+        """
+        Store encrypted credentials.
+
+        Args:
+            username: Username/email
+            password: Password to store
+
+        Returns:
+            bool: True if successful
+        """
+        try:
+            # Get or create encryption key
+            logger.info("Securely saving username and pasword")
+            key = self._get_or_create_key()
+            f = Fernet(key)
+
+            # Encrypt credentials
+            creds = {"username": username, "password": password}
+            encrypted_data = f.encrypt(json.dumps(creds).encode())
+
+            # Write encrypted data
+            self._ensure_dir()
+            self.cred_file.write_bytes(encrypted_data)
+            self.cred_file.chmod(0o600)  # Only owner can read/write
+
+            logger.debug(f"Stored encrypted credentials in {self.cred_file}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error storing credentials: {e}")
+            return False
+
+    def get_credentials(self) -> Optional[tuple[str, str]]:
+        """
+        Retrieve stored credentials.
+
+        Returns:
+            tuple: (username, password) if successful, None otherwise
+        """
+        try:
+            if not (self.key_file.exists() and self.cred_file.exists()):
+                logger.debug("No stored credentials found")
+                return None
+
+            # Read and decrypt
+            logger.info("Retrieving stored credentials from: %s", self.cred_file)
+            key = self.key_file.read_bytes()
+            f = Fernet(key)
+            encrypted_data = self.cred_file.read_bytes()
+            decrypted_data = f.decrypt(encrypted_data)
+
+            # Parse credentials
+            creds = json.loads(decrypted_data.decode())
+            return creds["username"], creds["password"]
+
+        except Exception as e:
+            logger.error("Error retrieving credentials: %s", e)
+            return None
+
+    def clear_credentials(self) -> bool:
+        """Remove stored credentials."""
+        try:
+            self.key_file.unlink(missing_ok=True)
+            self.cred_file.unlink(missing_ok=True)
+            return True
+        except Exception as e:
+            logger.error(f"Error clearing credentials: {e}")
+            return False
 
 
 class ExportType(Enum):
@@ -195,6 +308,28 @@ class RecipeSageAPI:
         return None
 
 
+def get_credentials(service_name: str = "RecipeSage") -> tuple[str, str]:
+    """Get credentials, prompting if not stored."""
+    cred_manager = CredentialManager(service_name)
+
+    # Try to get stored credentials
+    if stored_creds := cred_manager.get_credentials():
+        logger.info("Using stored credentials")
+        return stored_creds
+
+    # Prompt for credentials
+    email = input("Enter your email: ")
+    password = getpass.getpass("Enter password: ")
+
+    # Store credentials
+    if cred_manager.store_credentials(email, password):
+        logger.info("Credentials stored successfully")
+    else:
+        logger.warning("Failed to store credentials")
+
+    return email, password
+
+
 def trim_export_files(directory: Union[str, Path], keep_last: int = 5) -> None:
     """
     Trim RecipeSage export files, keeping only the most recent ones.
@@ -367,13 +502,7 @@ def fetch_export_file(data_dir):
         logger.info("Attempting to download your RecipeSage export file")
 
         api = RecipeSageAPI()
-        # Get credentials (in practice, use environment variables or secure input)
-        email = os.environ.get("SAGE_EMAIL")
-        if not email:
-            email = input("Enter your RecipeSage email: ")
-        password = os.environ.get("SAGE_PASSWORD")
-        if not password:
-            password = getpass.getpass("Enter your RecipeSage password: ")
+        email, password = get_credentials()
 
         token = api.login(email, password)
         if not token:
