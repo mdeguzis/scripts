@@ -9,8 +9,10 @@ import os
 import re
 import shutil
 import time
+from enum import Enum
 from io import BytesIO
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import isodate
 import requests
@@ -18,6 +20,13 @@ from PIL import Image
 
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-sage-export.log"
+
+
+class ExportType(Enum):
+    """Type of export to perform."""
+
+    API = "api"
+    APP = "app"
 
 
 class RecipeSageAPI:
@@ -47,6 +56,7 @@ class RecipeSageAPI:
         """
 
         login_url = f"{self.base_url}/users/login"
+        logged_in = False
 
         try:
             # Construct login payload
@@ -61,13 +71,12 @@ class RecipeSageAPI:
                 self.token = data.get("token", "")
                 if self.token:
                     logger.info("Login successful")
-                    return True
-            else:
-                return False
+                    logged_in = True
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Login request failed: {e}")
-            return False
+
+        return logged_in
 
     def start_export_job(self) -> Optional[str]:
         """
@@ -104,13 +113,14 @@ class RecipeSageAPI:
                     return job_id
 
             logger.error(
-                f"Failed to start export job: {response.status_code} - {response.text}"
+                "Failed to start export job: %s: %e",
+                response.status_code,
+                response.text,
             )
             return None
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Export job request failed: {e}")
-            return None
+            raise Exception("Export job request failed: %s", e)
 
     def get_jobs(self) -> Optional[Dict[str, Any]]:
         """
@@ -183,6 +193,41 @@ class RecipeSageAPI:
 
         logger.error(f"Export timed out after {timeout} seconds")
         return None
+
+
+def trim_export_files(directory: Union[str, Path], keep_last: int = 5) -> None:
+    """
+    Trim RecipeSage export files, keeping only the most recent ones.
+
+    Args:
+        directory: Directory containing export files
+        keep_last: Number of recent files to keep (default: 5)
+    """
+    directory = Path(directory)
+    logger.info("Trimming export files in %s, keeping last %s", directory, keep_last)
+
+    # Find all recipesage data files
+    pattern = re.compile(r"recipesage-data-\d+\.json-ld\.json$")
+    export_files = [
+        f for f in directory.iterdir() if f.is_file() and pattern.match(f.name)
+    ]
+
+    # Sort by modification time, newest first
+    export_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+
+    # Remove older files
+    if len(export_files) > keep_last:
+        files_to_remove = export_files[keep_last:]
+        for file in files_to_remove:
+            try:
+                file.unlink()
+                logger.debug("Removed old export file: %s", file)
+            except Exception as e:
+                logger.error("Error removing %s: %s", file, e)
+
+        logger.info("Removed %s old export file(s)", len(files_to_remove))
+    else:
+        logger.debug("Found %s files, no trimming needed", len(export_files))
 
 
 def initialize_logger(
@@ -489,21 +534,77 @@ def recipe_to_markdown(recipe):
     return markdown
 
 
-def export_recipes_to_markdown(json_file, output_dir, sync):
+def get_export_type(filepath: str) -> Optional[ExportType]:
+    """
+    Determine export type based on JSON structure.
+
+    Args:
+        file_path: Path to the JSON file
+
+    Returns:
+        ExportType or None if structure is invalid
+    """
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Check if it's an API export (dictionary with 'recipes' key)
+        if isinstance(data, dict) and "recipes" in data:
+            recipes = data["recipes"]
+            if (
+                isinstance(recipes, list)
+                and recipes
+                and isinstance(recipes[0], dict)
+                and recipes[0].get("@context") == "http://schema.org"
+            ):
+                return ExportType.API
+
+        # Check if it's an APP export (direct list of recipes)
+        if (
+            isinstance(data, list)
+            and data
+            and isinstance(data[0], dict)
+            and data[0].get("@context") == "http://schema.org"
+        ):
+            return ExportType.APP
+
+        return None
+
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error("Error reading file %s: %s", file_path, e)
+        return None
+
+
+def export_recipes_to_markdown(json_file, data_dir, output_dir, sync):
     """
     Exports recipes from JSON data to Markdown files.
+
+    Right now, the API download nests the data under a recipes key, adjust accordingly
+
+    API:
+    {
+        "recipes": [
+            {
+                "@context": "http://schema.org",
+
+    App export:
+    [
+        {
+            "@context": "http://schema.org",
     """
 
     processed_files = set()
     recipes_missing_courses = []
-    data_dir = os.path.join(output_dir, "data")
 
     # Load JSON from file
+    logger.debug("Extracting JSON data from %s", json_file)
+    export_type = get_export_type(json_file)
     with open(json_file, "r", encoding="utf-8") as f:
-        json_data = json.load(f)
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+        if export_type == ExportType.API:
+            logger.debug("Loading export type API")
+            json_data = json.load(f)["recipes"]
+        else:
+            json_data = json.load(f)
 
     for recipe in json_data:
         # Use recipe name or identifier	as the filename
@@ -743,14 +844,18 @@ if __name__ == "__main__":
     if not os.path.exists(args.file):
         logger.info("Error: File %s does not exist.", args.file)
     else:
-        export_recipes_to_markdown(args.file, args.output_dir, args.sync)
+        export_recipes_to_markdown(args.file, data_dir, args.output_dir, args.sync)
 
     # Save a copy of the JSON file in the output directory
-    logger.info("Saving a copy of the input JSON file in the output directory")
-    shutil.copy(args.file, data_dir)
+    if not args.auto_import:
+        logger.info("Saving a copy of the input JSON file in the output directory")
+        shutil.copy(args.file, data_dir)
 
     # Copy log to output dir
     shutil.copy(log_file, data_dir)
+
+    # Trim export files
+    trim_export_files(data_dir)
 
     logger.info("Done. Log: %s", log_file)
     logger.info("See output directory: %s", args.output_dir)
