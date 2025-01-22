@@ -17,6 +17,168 @@ from PIL import Image
 home_dir = os.path.expanduser("~")
 log_file = f"{home_dir}/recipe-sage-export.log"
 
+
+class RecipeSageAPI:
+    """RecipeSage API client."""
+
+    def __init__(self):
+        self.base_url = "https://api.beta.recipesage.com"
+        self.session = requests.Session()
+        self.token: Optional[str] = None
+
+        # Set default headers
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Origin": "https://recipesage.com",
+                "Referer": "https://recipesage.com/",
+            }
+        )
+
+    def login(self, email: str, password: str) -> bool:
+        """
+        Authenticate with RecipeSage.
+
+        Args:
+            email: User's email
+            password: User's password
+
+        Returns:
+            bool: True if login successful, False otherwise
+        """
+        login_url = urljoin(self.base_url, "/trpc/auth.login")
+
+        try:
+            # Construct login payload
+            payload = {"json": {"email": email, "password": password}}
+
+            logger.debug(f"Attempting login for {email}")
+            response = self.session.post(login_url, json=payload)
+
+            # Check response
+            if response.status_code == 200:
+                data = response.json()
+                # Extract token from response
+                if "result" in data:
+                    self.token = data["result"].get("token")
+                    if self.token:
+                        logger.info("Login successful")
+                        # Update session headers with token
+                        self.session.headers.update(
+                            {"Authorization": f"Bearer {self.token}"}
+                        )
+                        return True
+
+            logger.error(f"Login failed: {response.status_code} - {response.text}")
+            return False
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Login request failed: {e}")
+            return False
+
+    def start_export_job(self) -> Optional[str]:
+        """
+        Start a new export job.
+
+        Returns:
+            str: Job ID if successful, None otherwise
+        """
+        if not self.token:
+            logger.error("Not authenticated. Please login first.")
+            return None
+
+        export_url = urljoin(self.base_url, "/trpc/jobs.startExportJob")
+
+        try:
+            payload = {"json": {"format": "jsonld"}}
+
+            response = self.session.post(export_url, json=payload)
+
+            if response.status_code == 200:
+                data = response.json()
+                job_id = data.get("result", {}).get("jobId")
+                if job_id:
+                    logger.info(f"Export job started: {job_id}")
+                    return job_id
+
+            logger.error(
+                f"Failed to start export job: {response.status_code} - {response.text}"
+            )
+            return None
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Export job request failed: {e}")
+            return None
+
+    def get_jobs(self) -> Optional[Dict[str, Any]]:
+        """
+        Get list of export jobs.
+
+        Returns:
+            dict: Jobs data if successful, None otherwise
+        """
+        if not self.token:
+            logger.error("Not authenticated. Please login first.")
+            return None
+
+        jobs_url = urljoin(self.base_url, "/trpc/jobs.getJobs")
+
+        try:
+            response = self.session.get(jobs_url)
+
+            if response.status_code == 200:
+                return response.json()
+
+            logger.error(
+                f"Failed to get jobs: {response.status_code} - {response.text}"
+            )
+            return None
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Get jobs request failed: {e}")
+            return None
+
+    def wait_for_export(
+        self, job_id: str, timeout: int = 300, interval: int = 5
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Wait for export job to complete.
+
+        Args:
+            job_id: Export job ID to wait for
+            timeout: Maximum time to wait in seconds
+            interval: Time between checks in seconds
+
+        Returns:
+            dict: Export data if successful, None otherwise
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            jobs = self.get_jobs()
+            if not jobs:
+                return None
+
+            # Find our job
+            for job in jobs.get("result", []):
+                if job.get("jobId") == job_id:
+                    status = job.get("status")
+                    if status == "completed":
+                        logger.info("Export completed successfully")
+                        return job.get("result")
+                    elif status == "failed":
+                        logger.error("Export job failed")
+                        return None
+
+            logger.debug(f"Export in progress, waiting {interval} seconds...")
+            time.sleep(interval)
+
+        logger.error(f"Export timed out after {timeout} seconds")
+        return None
+
+
 def initialize_logger(
     log_level: int = logging.INFO,
     log_filename: Optional[str] = None,
@@ -98,6 +260,8 @@ def generate_manifest(root_path):
 
         # Add files	to the current level
         for file in files:
+            if not file.endswith(".md"):
+                continue
             if "files" not in current:
                 current["files"] = []
             full_path = os.path.join(root, file)
@@ -139,179 +303,6 @@ def resize_until_threshold(image_path, max_size=400, output_format="JPEG"):
 
         return base64_string
 
-#!/usr/bin/env python3
-
-import getpass
-import json
-import logging
-import time
-from typing import Any, Dict, Optional
-from urllib.parse import urljoin
-
-import requests
-
-
-class RecipeSageAPI:
-    """RecipeSage API client."""
-    
-    def __init__(self):
-        self.base_url = "https://api.beta.recipesage.com"
-        self.session = requests.Session()
-        self.token: Optional[str] = None
-        
-        # Set default headers
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Origin': 'https://recipesage.com',
-            'Referer': 'https://recipesage.com/'
-        })
-
-    def login(self, email: str, password: str) -> bool:
-        """
-        Authenticate with RecipeSage.
-        
-        Args:
-            email: User's email
-            password: User's password
-            
-        Returns:
-            bool: True if login successful, False otherwise
-        """
-        login_url = urljoin(self.base_url, "/trpc/auth.login")
-        
-        try:
-            # Construct login payload
-            payload = {
-                "json": {
-                    "email": email,
-                    "password": password
-                }
-            }
-            
-            logger.debug(f"Attempting login for {email}")
-            response = self.session.post(login_url, json=payload)
-            
-            # Check response
-            if response.status_code == 200:
-                data = response.json()
-                # Extract token from response
-                if 'result' in data:
-                    self.token = data['result'].get('token')
-                    if self.token:
-                        logger.info("Login successful")
-                        # Update session headers with token
-                        self.session.headers.update({
-                            'Authorization': f'Bearer {self.token}'
-                        })
-                        return True
-            
-            logger.error(f"Login failed: {response.status_code} - {response.text}")
-            return False
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Login request failed: {e}")
-            return False
-
-    def start_export_job(self) -> Optional[str]:
-        """
-        Start a new export job.
-        
-        Returns:
-            str: Job ID if successful, None otherwise
-        """
-        if not self.token:
-            logger.error("Not authenticated. Please login first.")
-            return None
-            
-        export_url = urljoin(self.base_url, "/trpc/jobs.startExportJob")
-        
-        try:
-            payload = {
-                "json": {
-                    "format": "jsonld"
-                }
-            }
-            
-            response = self.session.post(export_url, json=payload)
-            
-            if response.status_code == 200:
-                data = response.json()
-                job_id = data.get('result', {}).get('jobId')
-                if job_id:
-                    logger.info(f"Export job started: {job_id}")
-                    return job_id
-                    
-            logger.error(f"Failed to start export job: {response.status_code} - {response.text}")
-            return None
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Export job request failed: {e}")
-            return None
-
-    def get_jobs(self) -> Optional[Dict[str, Any]]:
-        """
-        Get list of export jobs.
-        
-        Returns:
-            dict: Jobs data if successful, None otherwise
-        """
-        if not self.token:
-            logger.error("Not authenticated. Please login first.")
-            return None
-            
-        jobs_url = urljoin(self.base_url, "/trpc/jobs.getJobs")
-        
-        try:
-            response = self.session.get(jobs_url)
-            
-            if response.status_code == 200:
-                return response.json()
-                
-            logger.error(f"Failed to get jobs: {response.status_code} - {response.text}")
-            return None
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Get jobs request failed: {e}")
-            return None
-
-    def wait_for_export(self, job_id: str, timeout: int = 300, interval: int = 5) -> Optional[Dict[str, Any]]:
-        """
-        Wait for export job to complete.
-        
-        Args:
-            job_id: Export job ID to wait for
-            timeout: Maximum time to wait in seconds
-            interval: Time between checks in seconds
-            
-        Returns:
-            dict: Export data if successful, None otherwise
-        """
-        start_time = time.time()
-        
-        while time.time() - start_time < timeout:
-            jobs = self.get_jobs()
-            if not jobs:
-                return None
-                
-            # Find our job
-            for job in jobs.get('result', []):
-                if job.get('jobId') == job_id:
-                    status = job.get('status')
-                    if status == 'completed':
-                        logger.info("Export completed successfully")
-                        return job.get('result')
-                    elif status == 'failed':
-                        logger.error("Export job failed")
-                        return None
-                        
-            logger.debug(f"Export in progress, waiting {interval} seconds...")
-            time.sleep(interval)
-            
-        logger.error(f"Export timed out after {timeout} seconds")
-        return None
-
 
 def fetch_export_file(output_dir):
     """
@@ -335,19 +326,19 @@ def fetch_export_file(output_dir):
 
         if not api.login(email, password):
             raise Exception("Failed to authenticate")
-        
+
         # Start export
         job_id = api.start_export_job()
         if not job_id:
             raise Exception("Failed to start export")
-        
+
         # Wait for export to complete
         result = api.wait_for_export(job_id)
         if result:
             json_data = result.json()
         else:
             raise Exception("Export failed")
-        
+
         # Write JSON to file in output dir to scoop up
         filename = f"recipesage-data-{int(time.time() * 1000)}.json-ld.json"
         filepath = os.path.join(output_dir, filename)
@@ -513,8 +504,6 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
             .replace("|", "")
             .lower()
         )
-        # Convert all to lowercase
-        filepath = os.path.join(output_dir, f"{filename}.md")
 
         # Convert recipe to	Markdown and save
         markdown = recipe_to_markdown(recipe)
@@ -523,38 +512,60 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
         # This is first-come-first serve processing to place recipes until I
         # have a better solution
         sub_folder_name = None
-        categories = ",".join(recipe.get("recipeCategory", "None"))
+        categories = recipe.get("recipeCategory", "None")
+        categories_joined = ",".join(recipe.get("recipeCategory", "None"))
         if len(categories) == 1:
-            sub_folder_name = categories.lower()
+            sub_folder_name = categories_joined.lower()
+            if sub_folder_name.startswith("_course:"):
+                # Skip, as we only have a course as a category
+                sub_folder_name = "uncategorized"
         else:
-            if "soup" in categories.lower():
+            if "soup" in categories_joined.lower():
                 sub_folder_name = "soup"
-            elif "chicken" in categories.lower():
+            elif "chicken" in categories_joined.lower():
                 sub_folder_name = "chicken"
-            elif "bread" in categories.lower():
+            elif "bread" in categories_joined.lower():
                 sub_folder_name = "bread"
-            elif "beef" in categories.lower():
+            elif "beef" in categories_joined.lower():
                 sub_folder_name = "beef"
-            elif "pork" in categories.lower():
+            elif "pork" in categories_joined.lower():
                 sub_folder_name = "pork"
-            elif "fish" in categories.lower():
+            elif "fish" in categories_joined.lower():
                 sub_folder_name = "fish"
             else:
                 sub_folder_name = "uncategorized"
 
-        # Create the subfolder path
-        file_output_dir = os.path.join(output_dir, sub_folder_name)
-        os.makedirs(file_output_dir, exist_ok=True)
-        output_file = os.path.join(file_output_dir, f"{filename}.md")
+        # Grab '_course:' value
+        # "recipeCategory": ["_course: main dish", "noodles", "_cuisine: asian"],
+        course = "no-course"
+        for category in categories:
+            if category.startswith("_course:"):
+                course = category.split(":")[1].strip().replace(" ", "-").lower()
+                logger.debug("Course: %s", course)
+                break
 
+        export_dir = os.path.join(output_dir, course, sub_folder_name)
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir, exist_ok=True)
+        output_file = os.path.join(export_dir, f"{filename}.md")
+
+        # Write final file
         with open(output_file, "w", encoding="utf-8") as md_file:
             md_file.write(markdown)
 
         processed_files.add(output_file)
-        logger.info(f"Exported: {output_file}")
+        logger.info("Exported: %s", output_file)
 
     if sync:
         sync_markdown_files(output_dir, processed_files)
+
+    logger.info("Generating file manifest for RecipeSage...")
+    manifest = generate_manifest(output_dir)
+    data_dir = os.path.join(output_dir, "data")
+    manifest_file = os.path.join(data_dir, "manifest.json")
+    with open(manifest_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(manifest, indent=4))
+
 
 def sync_markdown_files(extract_dir, processed_files):
     """
@@ -643,10 +654,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug", action="store_true", default=False, help="Enable	debug logging"
     )
-    parser.add_argument("-a", "--auto-import", action='store_true', help=
-                        "Automatically fetch export file from RecipeSage. Requires "
-                        "SAGE_USER and SAGE_PASSWORD be set in the environment"
-                        )
+    parser.add_argument(
+        "-a",
+        "--auto-import",
+        action="store_true",
+        help="Automatically fetch export file from RecipeSage. Requires "
+        "SAGE_USER and SAGE_PASSWORD be set in the environment",
+    )
     parser.add_argument("-f", "--file", help="Path to the .recipekeeperrecipes file.")
     parser.add_argument(
         "-i",
@@ -675,6 +689,12 @@ if __name__ == "__main__":
         logger = initialize_logger(log_level=logging.DEBUG)
     else:
         logger = initialize_logger()
+
+    # Create data dir
+    data_dir = os.path.join(args.output_dir, "data")
+    logger.debug("Creating data dir: %s", data_dir)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
 
     if args.auto_import:
         args.file = fetch_export_file(args.output_dir)
@@ -711,9 +731,6 @@ if __name__ == "__main__":
 
     # Save a copy of the JSON file in the output directory
     logger.info("Saving a copy of the input JSON file in the output directory")
-    data_dir = os.path.join(args.output_dir, "data")
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
     shutil.copy(args.file, data_dir)
 
     # Copy log to output dir
@@ -721,4 +738,3 @@ if __name__ == "__main__":
 
     logger.info("Done.	Log: %s", log_file)
     logger.info("See output directory: %s", args.output_dir)
-        
