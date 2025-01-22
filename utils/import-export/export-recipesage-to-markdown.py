@@ -486,6 +486,8 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
     """
 
     processed_files = set()
+    recipes_missing_courses = []
+    data_dir = os.path.join(output_dir, "data")
 
     # Load JSON from file
     with open(json_file, "r", encoding="utf-8") as f:
@@ -549,6 +551,10 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
             os.makedirs(export_dir, exist_ok=True)
         output_file = os.path.join(export_dir, f"{filename}.md")
 
+        # Missing course
+        if course == "no-course":
+            recipes_missing_courses.append(output_file)
+
         # Write final file
         with open(output_file, "w", encoding="utf-8") as md_file:
             md_file.write(markdown)
@@ -561,10 +567,15 @@ def export_recipes_to_markdown(json_file, output_dir, sync):
 
     logger.info("Generating file manifest for RecipeSage...")
     manifest = generate_manifest(output_dir)
-    data_dir = os.path.join(output_dir, "data")
     manifest_file = os.path.join(data_dir, "manifest.json")
     with open(manifest_file, "w", encoding="utf-8") as f:
         f.write(json.dumps(manifest, indent=4))
+
+    # Write file of missing courses
+    missing_courses_file = os.path.join(data_dir, "missing-courses.txt")
+    with open(missing_courses_file, "w", encoding="utf-8") as f:
+        for course in recipes_missing_courses:
+            f.write(f"{course}\n")
 
 
 def sync_markdown_files(extract_dir, processed_files):
@@ -736,5 +747,5 @@ if __name__ == "__main__":
     # Copy log to output dir
     shutil.copy(log_file, data_dir)
 
-    logger.info("Done.	Log: %s", log_file)
+    logger.info("Done. Log: %s", log_file)
     logger.info("See output directory: %s", args.output_dir)
