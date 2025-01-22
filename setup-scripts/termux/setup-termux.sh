@@ -21,6 +21,7 @@ pkg install \
 	openssh \
 	python-pip \
 	python \
+	rust \
 	termux-services \
 	termux-tools \
 	tree \
@@ -37,6 +38,7 @@ echo -e "\n[INFO] Installing Python packages\n"
 pip install \
 	bs4 \
 	isodate \
+	cryptography \
 	pillow \
 	requests
 
@@ -57,12 +59,21 @@ for service in "${services[@]}"; do
 	fi
 done
 
-echo -e "\n[INFO] Fetching scripts"
-if [[ ! -d "${HOME}/scripts" ]]; then
-	git clone https://github.com/mdeguzis/scripts "${HOME}/scripts"
-else
-	git -C "${HOME}/scripts" pull --rebase
-fi
+repos=()
+repos+=("mdeguzis/scripts")
+repos+=("mdeguzis/python")
+
+for repo in "${repos[@]}"; do
+	repo_user=$(echo "${repo}" | cut -d'/' -f1)
+	repo_name=$(echo "${repo}" | cut -d'/' -f2)
+	echo -e "\n[INFO] Checking for repo ${repo}"
+	if [[ ! -d "${HOME}/${repo_name}" ]]; then
+		git clone "{${repo}" "${HOME}/scripts"
+		git clone "https://github.com/${repo_user}/${repo_name}" "${HOME}/${repo_name}"
+	else
+		git -C "${HOME}/scripts" pull --rebase
+	fi
+done
 
 cd "${SCRIPT_DIR}"
 echo -e "\n[INFO] Configuring crontab"

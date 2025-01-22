@@ -1,5 +1,7 @@
-0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-paprika-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/paprika-export --update --sync
+0 12 * * * /data/data/com.termux/files/home/python/import-export/recipes/export-paprika-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/paprika-export --update --sync
 
-0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-recipe-keeper-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/recipe-keeper-export --update --sync
+0 12 * * * /data/data/com.termux/files/home/python/import-export/recipes/export-recipe-keeper-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/recipe-keeper-export --update --sync
 
-0 12 * * * /data/data/com.termux/files/home/scripts/utils/import-export/export-recipesage-to-markdown.py -i /data/data/com.termux/files/home/storage/downloads -o /data/data/com.termux/files/home/storage/documents/recipesage-export --update --sync
+# Use auto-import method for now
+# Requires running at least once manually to store/encrypt the user/pass
+0 12 * * * /data/data/com.termux/files/home/python/import-export/recipes/export-recipesage-to-markdown.py --auto-import -o /data/data/com.termux/files/home/storage/documents/recipesage-export --update --sync
