@@ -2,11 +2,13 @@
 
 import argparse
 import base64
+import getpass
 import json
 import logging
 import os
 import re
 import shutil
+import time
 from io import BytesIO
 from typing import Any, Dict, Optional
 
@@ -24,16 +26,11 @@ class RecipeSageAPI:
     def __init__(self):
         self.base_url = "https://api.beta.recipesage.com"
         self.session = requests.Session()
-        self.token: Optional[str] = None
 
         # Set default headers
         self.session.headers.update(
             {
-                "User-Agent": "Mozilla/5.0",
-                "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Origin": "https://recipesage.com",
-                "Referer": "https://recipesage.com/",
             }
         )
 
@@ -48,31 +45,25 @@ class RecipeSageAPI:
         Returns:
             bool: True if login successful, False otherwise
         """
-        login_url = urljoin(self.base_url, "/trpc/auth.login")
+
+        login_url = f"{self.base_url}/users/login"
 
         try:
             # Construct login payload
-            payload = {"json": {"email": email, "password": password}}
+            payload = {"email": email, "password": password}
 
-            logger.debug(f"Attempting login for {email}")
+            logger.debug("Attempting login for: %s", email)
             response = self.session.post(login_url, json=payload)
 
             # Check response
             if response.status_code == 200:
                 data = response.json()
-                # Extract token from response
-                if "result" in data:
-                    self.token = data["result"].get("token")
-                    if self.token:
-                        logger.info("Login successful")
-                        # Update session headers with token
-                        self.session.headers.update(
-                            {"Authorization": f"Bearer {self.token}"}
-                        )
-                        return True
-
-            logger.error(f"Login failed: {response.status_code} - {response.text}")
-            return False
+                self.token = data.get("token", "")
+                if self.token:
+                    logger.info("Login successful")
+                    return True
+            else:
+                return False
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Login request failed: {e}")
@@ -89,18 +80,27 @@ class RecipeSageAPI:
             logger.error("Not authenticated. Please login first.")
             return None
 
-        export_url = urljoin(self.base_url, "/trpc/jobs.startExportJob")
+        export_url = f"{self.base_url}/trpc/jobs.startExportJob"
 
         try:
             payload = {"json": {"format": "jsonld"}}
 
-            response = self.session.post(export_url, json=payload)
+            response = self.session.post(
+                export_url,
+                headers={"Authorization": f"Bearer {self.token}"},
+                json=payload,
+            )
 
             if response.status_code == 200:
                 data = response.json()
-                job_id = data.get("result", {}).get("jobId")
+                job_id = (
+                    data.get("result", "")
+                    .get("data", "")
+                    .get("json", "")
+                    .get("jobId", "")
+                )
                 if job_id:
-                    logger.info(f"Export job started: {job_id}")
+                    logger.info("Export job started: %s", job_id)
                     return job_id
 
             logger.error(
@@ -123,16 +123,18 @@ class RecipeSageAPI:
             logger.error("Not authenticated. Please login first.")
             return None
 
-        jobs_url = urljoin(self.base_url, "/trpc/jobs.getJobs")
+        jobs_url = f"{self.base_url}/trpc/jobs.getJobs"
 
         try:
-            response = self.session.get(jobs_url)
+            response = self.session.get(
+                jobs_url, headers={"Authorization": f"Bearer {self.token}"}
+            )
 
             if response.status_code == 200:
                 return response.json()
 
             logger.error(
-                f"Failed to get jobs: {response.status_code} - {response.text}"
+                "Failed to get jobs: %s - %s", response.status_code, response.text
             )
             return None
 
@@ -162,13 +164,17 @@ class RecipeSageAPI:
                 return None
 
             # Find our job
-            for job in jobs.get("result", []):
-                if job.get("jobId") == job_id:
+            for job in jobs["result"]["data"]["json"]:
+                # logger.debug("Job: %s", job)
+                this_job_id = job.get("id", "")
+                if this_job_id == job_id:
                     status = job.get("status")
-                    if status == "completed":
+                    logger.debug("Job status: %s", status)
+                    if status == "SUCCESS":
                         logger.info("Export completed successfully")
-                        return job.get("result")
-                    elif status == "failed":
+                        logger.debug(job)
+                        return job["meta"]["exportDownloadUrl"]
+                    elif status == "FAILED":
                         logger.error("Export job failed")
                         return None
 
@@ -317,15 +323,16 @@ def fetch_export_file(output_dir):
 
         api = RecipeSageAPI()
         # Get credentials (in practice, use environment variables or secure input)
-        email = os.environ.get("SAGE_USER")
+        email = os.environ.get("SAGE_EMAIL")
         if not email:
             email = input("Enter your RecipeSage email: ")
         password = os.environ.get("SAGE_PASSWORD")
         if not password:
             password = getpass.getpass("Enter your RecipeSage password: ")
 
-        if not api.login(email, password):
-            raise Exception("Failed to authenticate")
+        token = api.login(email, password)
+        if not token:
+            raise RuntimeError("Failed to authenticate with RecipeSage")
 
         # Start export
         job_id = api.start_export_job()
@@ -333,17 +340,19 @@ def fetch_export_file(output_dir):
             raise Exception("Failed to start export")
 
         # Wait for export to complete
-        result = api.wait_for_export(job_id)
-        if result:
-            json_data = result.json()
-        else:
-            raise Exception("Export failed")
+        download_url = api.wait_for_export(job_id)
+
+        # The result contains a key, exportDownloadUrl, download the content as JSON
+        logger.info("Attempting to download: %s", download_url)
+        json_data = requests.get(download_url, timeout=30).json()
 
         # Write JSON to file in output dir to scoop up
         filename = f"recipesage-data-{int(time.time() * 1000)}.json-ld.json"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(json.dumps(json_data, indent=4))
+
+        logger.info("Wrote downloaded JSON data export as: %s", filepath)
         return filename
 
     except RuntimeError as e:
