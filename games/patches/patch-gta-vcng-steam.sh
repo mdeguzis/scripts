@@ -8,20 +8,25 @@ sleep 3
 
 rm -fv "${game_path}/d3d9.dll"
 
+echo -e "\nPatching common data"
+sleep 2
 cp -v "${game_path}/data_launch/enb/del_enb/gtaRainRender.xml" "${game_path}/common/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/gtaStormRender.xml" "${game_path}/common/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/visualSettings.dat" "${game_path}/common/data/"
 
+echo -e "\nPatching main data"
+sleep 2
 cp -v "${game_path}/data_launch/enb/del_enb/timecyc.dat" "${game_path}/pc/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers.dat" "${game_path}/pc/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers2.dat" "${game_path}/pc/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers3.dat" "${game_path}/pc/data/"
 cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers4.dat" "${game_path}/pc/data/"
 
-
+echo -e "\nPatching textures"
+sleep 2
 cp -v "${game_path}/data_launch/enb/del_enb/lights_occluders.wtd" "${game_path}/pc/textures/"
 cp -v "${game_path}/data_launch/enb/del_enb/skydome.wtd" "${game_path}/pc/textures/"
 cp -v "${game_path}/data_launch/enb/del_enb/stipple.wtd" "${game_path}/pc/textures/"
-cp -v "${game_path}/data_launch/enb/del_enb/stipple.wtd" "${game_path}/pc/textures/"
+cp -v "${game_path}/data_launch/enb/del_enb/fx_rain.wtd" "${game_path}/pc/textures/"
 
 echo -e "\nDONE!"
