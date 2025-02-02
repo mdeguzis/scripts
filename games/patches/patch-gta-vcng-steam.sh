@@ -2,31 +2,36 @@
 
 set -e
 
+cat<<-EOF
+
+NOTE: This follows https://www.reddit.com/r/SteamDeck/comments/1i9ly7b/vice_city_nextgen/, allowing you
+to use ENB. It does NOT remove any files. 
+
+Known issues:
+
+1. The fourth intro cutscene crashes the game. When the 3rd scene plays, mash ENTER on an attached keyboard.
+   A controller will NOT work for this. You can also copy a save game to ~/Games/ and this script will
+   pick it up and apply it for any new installs.
+
+
+EOF
+read -erp "Press ENTER to continue. CTRL+C to exit."
+
 game_path=$(find ~/.local/share/Steam/steamapps/compatdata/ -name "GTA Vice City Nextgen Edition" -not -path "*Start Menu*" -type d)
 echo "Using game path: ${game_path}"
 sleep 3
 
-rm -fv "${game_path}/d3d9.dll"
-
-echo -e "\nPatching common data"
+echo -e "\nInstalling components via Protontrick (flapak)"
 sleep 2
-cp -v "${game_path}/data_launch/enb/del_enb/gtaRainRender.xml" "${game_path}/common/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/gtaStormRender.xml" "${game_path}/common/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/visualSettings.dat" "${game_path}/common/data/"
+flatpak --user run com.github.Matoking.protontricks 3054562829 d3dcompiler_42
+flatpak --user run com.github.Matoking.protontricks 3054562829 d3dcompiler_43
+flatpak --user run com.github.Matoking.protontricks 3054562829 d3dcompiler_47
+flatpak --user run com.github.Matoking.protontricks 3054562829 d3dx9_42
+flatpak --user run com.github.Matoking.protontricks 3054562829 d3dx9_43
 
-echo -e "\nPatching main data"
+echo -e "\nOpening winecfg.exe. Please add d3d9 to overrides in the libraries tab..."
+read -erp "Press ENTER to continue. CTRL+C to exit."
 sleep 2
-cp -v "${game_path}/data_launch/enb/del_enb/timecyc.dat" "${game_path}/pc/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers.dat" "${game_path}/pc/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers2.dat" "${game_path}/pc/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers3.dat" "${game_path}/pc/data/"
-cp -v "${game_path}/data_launch/enb/del_enb/timecyclemodifiers4.dat" "${game_path}/pc/data/"
-
-echo -e "\nPatching textures"
-sleep 2
-cp -v "${game_path}/data_launch/enb/del_enb/lights_occluders.wtd" "${game_path}/pc/textures/"
-cp -v "${game_path}/data_launch/enb/del_enb/skydome.wtd" "${game_path}/pc/textures/"
-cp -v "${game_path}/data_launch/enb/del_enb/stipple.wtd" "${game_path}/pc/textures/"
-cp -v "${game_path}/data_launch/enb/del_enb/fx_rain.wtd" "${game_path}/pc/textures/"
+flatpak --user run com.github.Matoking.protontricks 3054562829 winecfg
 
 echo -e "\nDONE!"
