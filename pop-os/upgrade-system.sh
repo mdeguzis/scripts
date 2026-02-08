@@ -29,16 +29,36 @@ if ! flatpak update -y; then
     exit 1
 fi
 
-echo -e "\n###### Python user software update ######"
-for x in $(pip3 list --user --outdated --format=freeze \
-        | grep -v '^\-e' \
-        | cut -d = -f 1); 
-    do
-        if ! sudo pip3 install -U ${x} --ignore-installed; then
-            echo "ERROR: Pip upgrade failed for ${x}!"
-            exit 1
-        fi
-    done
+
+echo -e "\n###### Python user software update ######\n"
+
+# Fetch outdated packages in JSON format
+OUTDATED_JSON=$(pip3 list --user --outdated --format=json)
+
+# Check if there are any outdated packages
+if [ "$OUTDATED_JSON" == "[]" ] || [ -z "$OUTDATED_JSON" ]; then
+    echo "[INFO] All user python packages are up to date."
+    exit 0
+fi
+
+# Iterate through each item in the JSON array
+echo "$OUTDATED_JSON" | jq -c '.[]' | while read -r pkg; do
+    name=$(echo "$pkg" | jq -r '.name')
+    current=$(echo "$pkg" | jq -r '.version')
+    latest=$(echo "$pkg" | jq -r '.latest_version')
+
+    echo "-------------------------------------------------------"
+    echo "[INFO] Package: ${name}"
+    echo "[INFO] Current: ${current} -> Latest: ${latest}"
+
+    # On Pop!_OS, we add the break flag to allow --user installs to proceed
+    if ! pip3 install --user -U "${name}" --break-system-packages; then
+        echo "❌ ERROR: Update failed for ${name}!"
+        exit 1
+    else
+        echo "✅ Success: ${name} updated"
+    fi
+done
 
 echo -e "\n--------------------------------"
 echo "Running pop-upgrade..."
