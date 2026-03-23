@@ -36,8 +36,34 @@ sudo systemctl restart qbittorrent-nox
 
 - BitTorrent port: **7272** (TCP + UDP) — forward this on your router to the Pi's IP
 - WebUI port: **8080**
-- Downloads temp path: enabled
 - UPnP/NAT-PMP: disabled (use manual port forwarding)
+
+## Download Paths
+
+Downloads use two locations to protect in-progress files from Samba share interruptions:
+
+| Stage | Path |
+|-------|------|
+| In progress | `/home/qbittorrent-nox/Downloads/incomplete` (local) |
+| Completed | `/mnt/nvidia-shield/media/downloads` (Samba share) |
+
+qBittorrent moves files to the save path automatically on completion — no extra service needed.
+
+### Samba share permissions
+
+The CIFS mount must use `file_mode=0775,dir_mode=0775` and `qbittorrent-nox` must be in the owner's group so it can write completed downloads to the share.
+
+`/etc/fstab`:
+```
+//192.168.1.128/samsung /mnt/nvidia-shield  cifs  credentials=/home/mikeyd/.smbcredentials,uid=1000,gid=1000,file_mode=0775,dir_mode=0775,nofail  0  0
+```
+
+Add `qbittorrent-nox` to the `mikeyd` group:
+```bash
+sudo usermod -aG mikeyd qbittorrent-nox
+```
+
+The install script handles all of this when you answer **y** to the Samba prompt.
 
 ---
 
