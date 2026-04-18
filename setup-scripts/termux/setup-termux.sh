@@ -1,7 +1,8 @@
 #!/bin/bash
 # Installs common packages and services
 # Preferred: termux-backup, termux-services
-# Provides a general agnostic setup, including a Termux-native Claude install.
+# Provides a general agnostic setup for Termux, including a supported Claude
+# workflow via proot-distro instead of the now-broken native Android path.
 
 set -euo pipefail
 
@@ -10,11 +11,6 @@ SCRIPT_DIR="$(
 	pwd -P
 )"
 
-CLAUDE_NPM_PACKAGE="@anthropic-ai/claude-code"
-# Native Termux/Android arm64 works with 1.0.27 in local testing.
-# Newer releases reject the platform during install with:
-#   "Unsupported platform: android arm64"
-CLAUDE_NPM_VERSION="1.0.27"
 PYTHON_PACKAGES=(
 	bs4
 	cryptography
@@ -84,79 +80,52 @@ ensure_npm_prefix() {
 	export PATH="${HOME}/.npm-global/bin:${PATH}"
 }
 
-install_claude() {
-	echo -e "\n[INFO] Installing Claude Code\n"
-	local npm_root
-	local claude_dir
-	local install_script
-
-	if command -v claude >/dev/null 2>&1; then
-		echo "[INFO] Claude already installed at $(command -v claude); refreshing package"
-	fi
-	echo "[INFO] Pinning ${CLAUDE_NPM_PACKAGE}@${CLAUDE_NPM_VERSION} for native Termux compatibility"
-	npm install -g --include=optional "${CLAUDE_NPM_PACKAGE}@${CLAUDE_NPM_VERSION}"
-
-	npm_root="$(npm root -g)"
-	claude_dir="${npm_root}/${CLAUDE_NPM_PACKAGE}"
-	install_script="${claude_dir}/install.cjs"
-
-	if [[ -f "${install_script}" ]]; then
-		echo "[INFO] Running Claude postinstall manually"
-		node "${install_script}"
-	else
-		echo "[INFO] Claude install script not present for this version; skipping manual postinstall"
-	fi
-
-	if command -v claude >/dev/null 2>&1; then
-		echo "[INFO] Claude available at $(command -v claude)"
-	else
-		echo "[WARN] Claude package installed but command not found on PATH yet"
-	fi
+setup_claude_helpers() {
+	local rc_file
+	for rc_file in "${HOME}/.bashrc" "${HOME}/.zshrc"; do
+		append_if_missing "${rc_file}" "alias termux-ubuntu='proot-distro login ubuntu'"
+		append_if_missing "${rc_file}" "alias termux-claude-help='cat \"\$HOME/CLAUDE-TERMUX-SETUP.txt\"'"
+	done
 }
 
-verify_claude() {
-	echo -e "\n[INFO] Verifying Claude installation\n"
-	if ! command -v claude >/dev/null 2>&1; then
-		echo "[ERROR] Claude binary not found on PATH after install"
-		return 1
-	fi
+setup_claude_proot_guidance() {
+	local guidance_file="${HOME}/CLAUDE-TERMUX-SETUP.txt"
+	cat <<'EOF' | tee "${guidance_file}"
 
-	set +e
-	local version_output
-	version_output="$(claude --version 2>&1)"
-	local version_exit=$?
-	local help_output
-	help_output="$(claude --help 2>&1)"
-	local help_exit=$?
-	set -e
+[INFO] Claude Code should be run in proot-distro Ubuntu on Termux.
 
-	echo "[INFO] claude --version exit code: ${version_exit}"
-	if [[ ${version_exit} -eq 0 ]]; then
-		echo "[INFO] Claude version output: ${version_output}"
-		echo "[INFO] Claude smoke test passed"
-		return 0
-	fi
+Why:
+- Older Claude builds could run on native Termux.
+- Current Claude versions require newer clients and newer clients reject
+  platform "android arm64".
+- Native Termux is therefore no longer a stable/supported Claude path.
 
-	echo "[INFO] claude --help exit code: ${help_exit}"
-	if [[ ${help_exit} -eq 0 ]]; then
-		echo "[INFO] Claude smoke test passed"
-		return 0
-	fi
+Recommended setup:
 
-	if printf '%s' "${help_output}" | grep -Eiq 'usage:|claude|commands:|options:'; then
-		echo "[WARN] claude --help returned a non-zero exit code but printed usage text"
-		echo "[INFO] Claude help output:"
-		printf '%s\n' "${help_output}"
-		echo "[INFO] Treating Claude smoke test as passed"
-		return 0
-	fi
+1. Install Ubuntu in proot:
+   proot-distro install ubuntu
 
-	echo "[ERROR] Claude smoke test failed"
-	echo "[ERROR] claude --version output:"
-	printf '%s\n' "${version_output}"
-	echo "[ERROR] claude --help output:"
-	printf '%s\n' "${help_output}"
-	return 1
+2. Enter Ubuntu:
+   proot-distro login ubuntu
+
+3. Inside Ubuntu, install dependencies:
+   apt update
+   apt install -y curl git nodejs npm python3
+
+4. Install Claude Code inside Ubuntu:
+   npm install -g @anthropic-ai/claude-code
+   claude --version
+
+5. Work from a shared Termux folder, for example:
+   cd /data/data/com.termux/files/home/src
+
+Convenience commands added to your shell:
+- termux-ubuntu
+- termux-claude-help
+
+This note was also written to:
+  ~/CLAUDE-TERMUX-SETUP.txt
+EOF
 }
 
 # Base packages
@@ -174,8 +143,8 @@ echo -e "\n[INFO] Installing Python packages\n"
 python -m pip install --verbose --upgrade-strategy only-if-needed "${PYTHON_PACKAGES[@]}"
 
 ensure_npm_prefix
-install_claude
-verify_claude
+setup_claude_helpers
+setup_claude_proot_guidance
 
 # https://wiki.termux.com/wiki/Termux-services
 echo -e "\n[INFO] Activating services\n"
@@ -223,4 +192,4 @@ termux-setup-storage
 echo -e "\n[INFO] Finishing up"
 
 echo -e "\n[INFO] Running backup..."
-bash -x termux-backup --force "${HOME}/storage/documents/backups/termux/termux-backup.tar.gz"
+bash -x "$(command -v termux-backup)" --force "${HOME}/storage/documents/backups/termux/termux-backup.tar.gz"
