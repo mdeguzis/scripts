@@ -217,4 +217,4 @@ termux-setup-storage
 echo -e "\n[INFO] Finishing up"
 
 echo -e "\n[INFO] Running backup..."
-termux-backup --force "${HOME}/storage/documents/backups/termux/termux-backup.tar.gz"
+bash -x termux-backup --force "${HOME}/storage/documents/backups/termux/termux-backup.tar.gz"
