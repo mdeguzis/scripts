@@ -92,6 +92,27 @@ install_claude() {
 	fi
 }
 
+verify_claude() {
+	echo -e "\n[INFO] Verifying Claude installation\n"
+	if ! command -v claude >/dev/null 2>&1; then
+		echo "[ERROR] Claude binary not found on PATH after install"
+		return 1
+	fi
+
+	set +e
+	claude --help >/dev/null 2>&1
+	local claude_exit=$?
+	set -e
+
+	echo "[INFO] claude --help exit code: ${claude_exit}"
+	if [[ ${claude_exit} -ne 0 ]]; then
+		echo "[ERROR] Claude smoke test failed"
+		return "${claude_exit}"
+	fi
+
+	echo "[INFO] Claude smoke test passed"
+}
+
 # Base packages
 echo -e "\n[INFO] Running upgrade\n"
 pkg update -y
@@ -104,11 +125,11 @@ echo -e "\n[INFO] Repairing shell rc files\n"
 repair_shell_rc
 
 echo -e "\n[INFO] Installing Python packages\n"
-python -m pip install --upgrade pip
-python -m pip install "${PYTHON_PACKAGES[@]}"
+python -m pip install --upgrade-strategy only-if-needed "${PYTHON_PACKAGES[@]}"
 
 ensure_npm_prefix
 install_claude
+verify_claude
 
 # https://wiki.termux.com/wiki/Termux-services
 echo -e "\n[INFO] Activating services\n"
