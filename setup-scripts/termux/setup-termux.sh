@@ -11,6 +11,10 @@ SCRIPT_DIR="$(
 )"
 
 CLAUDE_NPM_PACKAGE="@anthropic-ai/claude-code"
+# Native Termux/Android arm64 works with 1.0.27 in local testing.
+# Newer releases reject the platform during install with:
+#   "Unsupported platform: android arm64"
+CLAUDE_NPM_VERSION="1.0.27"
 PYTHON_PACKAGES=(
 	bs4
 	cryptography
@@ -30,6 +34,7 @@ BASE_PACKAGES=(
 	ncdu \
 	nodejs-lts \
 	openssh \
+	proot-distro \
 	python-pip \
 	python \
 	rust \
@@ -88,7 +93,8 @@ install_claude() {
 	if command -v claude >/dev/null 2>&1; then
 		echo "[INFO] Claude already installed at $(command -v claude); refreshing package"
 	fi
-	npm install -g --include=optional "${CLAUDE_NPM_PACKAGE}"
+	echo "[INFO] Pinning ${CLAUDE_NPM_PACKAGE}@${CLAUDE_NPM_VERSION} for native Termux compatibility"
+	npm install -g --include=optional "${CLAUDE_NPM_PACKAGE}@${CLAUDE_NPM_VERSION}"
 
 	npm_root="$(npm root -g)"
 	claude_dir="${npm_root}/${CLAUDE_NPM_PACKAGE}"
@@ -98,7 +104,7 @@ install_claude() {
 		echo "[INFO] Running Claude postinstall manually"
 		node "${install_script}"
 	else
-		echo "[WARN] Claude install script not found at ${install_script}"
+		echo "[INFO] Claude install script not present for this version; skipping manual postinstall"
 	fi
 
 	if command -v claude >/dev/null 2>&1; then
