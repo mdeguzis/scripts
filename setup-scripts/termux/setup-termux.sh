@@ -125,7 +125,7 @@ echo -e "\n[INFO] Repairing shell rc files\n"
 repair_shell_rc
 
 echo -e "\n[INFO] Installing Python packages\n"
-python -m pip install --upgrade-strategy only-if-needed "${PYTHON_PACKAGES[@]}"
+python -m pip install --verbose --upgrade-strategy only-if-needed "${PYTHON_PACKAGES[@]}"
 
 ensure_npm_prefix
 install_claude
