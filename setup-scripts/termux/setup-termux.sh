@@ -26,6 +26,7 @@ BASE_PACKAGES=(
 	cronie \
 	curl \
 	git \
+	jq \
 	make \
 	ncdu \
 	nodejs-lts \
@@ -35,13 +36,16 @@ BASE_PACKAGES=(
 	python \
 	ripgrep \
 	rust \
+	rsync \
 	termux-services \
 	termux-tools \
 	tree \
 	unzip \
 	util-linux \
+	uv \
 	vim \
 	xz-utils \
+	zip \
 	zstd
 )
 
