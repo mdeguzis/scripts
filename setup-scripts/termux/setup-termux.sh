@@ -32,6 +32,7 @@ BASE_PACKAGES=(
 	nodejs-lts \
 	openssh \
 	proot-distro \
+ python-pillow \
 	python-pip \
 	python \
 	ripgrep \
